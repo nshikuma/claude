@@ -1,0 +1,34 @@
+{
+ "generatedAt": "2026-09-14T19:22:24.276Z",
+ "synthetic": true,
+ "errors": {},
+ "trace": [],
+ "biasByModel": {
+  "ecmwf_wam025": {
+   "factor": 1.4,
+   "n": 48,
+   "raw": 1.486342972210906,
+   "note": "buoy ran 49% above this model over the last 24 h (48 matched hours)"
+  },
+  "ncep_gfswave025": {
+   "factor": 1.3970668043831242,
+   "n": 48,
+   "raw": 1.3970668043831242,
+   "note": "buoy ran 40% above this model over the last 24 h (48 matched hours)"
+  },
+  "meteofrance_wave": {
+   "factor": 1.3344691046507686,
+   "n": 48,
+   "raw": 1.3344691046507686,
+   "note": "buoy ran 33% above this model over the last 24 h (48 matched hours)"
+  }
+ },
+ "counts": {
+  "buoyRecords": 97,
+  "spectrumBands": 64,
+  "tideSeries": 432,
+  "hourly": 384,
+  "days": 14,
+  "archives": 0
+ }
+}

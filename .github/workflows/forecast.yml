@@ -1,0 +1,87 @@
+name: forecast
+
+# Fetches live buoy, tide and model data, rebuilds the forecast, commits the
+# result, and publishes the page.
+#
+# The data fetching deliberately lives here rather than in the browser: GitHub's
+# runners have unrestricted outbound network access, and committing each run is
+# what builds the forecast archive that the drift and skill panels depend on.
+
+on:
+  schedule:
+    # Every three hours. GitHub only runs scheduled workflows on the repository's
+    # DEFAULT branch, so this stays idle until the project is merged there.
+    - cron: '7 */3 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - 'tp-surfcast2/src/**'
+      - 'tp-surfcast2/docs/**'
+      - '.github/workflows/forecast.yml'
+      # Never retrigger on the workflow's own data commits.
+      - '!tp-surfcast2/docs/data/**'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: tp-surfcast2
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tp-surfcast2
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run model tests
+        run: node --test test/*.test.js
+
+      - name: Build forecast
+        id: build
+        run: node src/build.js
+
+      - name: Show diagnostics
+        if: always()
+        run: cat docs/data/diagnostics.json || true
+
+      - name: Commit forecast data
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data
+          if git diff --staged --quiet; then
+            echo "No data changes to commit."
+          else
+            git commit -m "forecast: run $(date -u +'%Y-%m-%dT%H:%MZ')"
+            # Another run may have landed while this one was building.
+            for i in 1 2 3 4; do
+              git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}" && break
+              echo "push attempt $i failed, retrying"; sleep $((2 ** i))
+            done
+          fi
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: tp-surfcast2/docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
