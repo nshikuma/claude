@@ -3,24 +3,27 @@ name: forecast
 # Fetches live buoy, tide and model data, rebuilds the forecast, commits the
 # result, and publishes the page.
 #
-# The data fetching deliberately lives here rather than in the browser: GitHub's
+# The data fetching lives here rather than in the browser because GitHub's
 # runners have unrestricted outbound network access, and committing each run is
-# what builds the forecast archive that the drift and skill panels depend on.
+# what builds the forecast archive the drift and skill panels depend on.
+#
+# The build and the publish are deliberately SEPARATE jobs: if GitHub Pages is
+# not set up yet, only the publish fails. The forecast still builds and commits,
+# so the data keeps accumulating and nothing is lost.
 
 on:
   schedule:
-    # Every three hours. GitHub only runs scheduled workflows on the repository's
-    # DEFAULT branch, so this stays idle until the project is merged there.
+    # Every three hours. GitHub runs scheduled workflows on the repository's
+    # DEFAULT branch only, whatever that branch happens to be called.
     - cron: '7 */3 * * *'
   workflow_dispatch:
   push:
-    branches: [main, master]
     paths:
       - 'tp-surfcast2/src/**'
-      - 'tp-surfcast2/docs/**'
+      - 'tp-surfcast2/docs/index.html'
+      - 'tp-surfcast2/docs/app.js'
+      - 'tp-surfcast2/docs/styles.css'
       - '.github/workflows/forecast.yml'
-      # Never retrigger on the workflow's own data commits.
-      - '!tp-surfcast2/docs/data/**'
 
 permissions:
   contents: write
@@ -33,6 +36,7 @@ concurrency:
 
 jobs:
   build:
+    name: Build forecast
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -48,12 +52,14 @@ jobs:
         run: node --test test/*.test.js
 
       - name: Build forecast
-        id: build
         run: node src/build.js
 
-      - name: Show diagnostics
+      - name: Report which data sources answered
         if: always()
-        run: cat docs/data/diagnostics.json || true
+        run: |
+          echo "::group::diagnostics.json"
+          cat docs/data/diagnostics.json || echo "(no diagnostics written)"
+          echo "::endgroup::"
 
       - name: Commit forecast data
         run: |
@@ -62,26 +68,44 @@ jobs:
           git add docs/data
           if git diff --staged --quiet; then
             echo "No data changes to commit."
-          else
-            git commit -m "forecast: run $(date -u +'%Y-%m-%dT%H:%MZ')"
-            # Another run may have landed while this one was building.
-            for i in 1 2 3 4; do
-              git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}" && break
-              echo "push attempt $i failed, retrying"; sleep $((2 ** i))
-            done
+            exit 0
           fi
+          git commit -m "forecast: run $(date -u +'%Y-%m-%dT%H:%MZ') [skip ci]"
+          for i in 1 2 3 4; do
+            if git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              exit 0
+            fi
+            echo "push attempt $i failed, retrying"; sleep $((2 ** i))
+          done
+          echo "::error::Could not push the forecast data after 4 attempts."
+          exit 1
 
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - name: Package the site
+        uses: actions/upload-artifact@v4
         with:
+          name: site
           path: tp-surfcast2/docs
+          retention-days: 3
 
-  deploy:
+  publish:
+    name: Publish to GitHub Pages
     needs: build
     runs-on: ubuntu-latest
+    # Publishing is best-effort: it needs Pages turned on in repository
+    # settings, which is a one-time manual step. Until then this job fails on
+    # its own and the forecast build above is unaffected.
+    continue-on-error: true
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          # The build job just pushed the fresh data; take the updated tip.
+          ref: ${{ github.ref_name }}
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: tp-surfcast2/docs
       - id: deployment
         uses: actions/deploy-pages@v4

@@ -55,20 +55,25 @@ you a new long-period pulse is filling in before it shows up in the bulk height.
 
 ## Setup (one time)
 
-The scheduled build needs to be on the repository's **default branch**, because
-GitHub only runs `schedule` triggers there.
+This branch is already the repository's **default branch**, so the three-hourly
+schedule will run on it as-is. Nothing needs merging.
 
-1. Merge this branch into `main`.
-2. **Settings &rarr; Pages &rarr; Source: GitHub Actions.**
-3. **Actions &rarr; forecast &rarr; Run workflow** to do the first build.
+1. **Rename the branch to `main`** (optional but recommended).
+   Settings &rarr; Branches &rarr; pencil icon next to the default branch &rarr; `main`.
+   One click, nothing breaks, and it keeps future branches from colliding with it.
+2. **Turn on Pages.** Settings &rarr; Pages &rarr; Source: **GitHub Actions**.
+3. **Run it once.** Actions &rarr; `forecast` &rarr; Run workflow.
 
-> `nshikuma/claude` is currently **private**. GitHub Pages from a private repo
-> needs GitHub Pro; on Pro the published site is public anyway. If you would
-> rather not pay for that, move `tp-surfcast2/` and `.github/workflows/forecast.yml`
-> into a new **public** repo &mdash; nothing but forecast data is published, so there
-> is nothing sensitive in it.
+After that it rebuilds and redeploys itself every three hours.
 
-After that it rebuilds every three hours and redeploys itself.
+> `nshikuma/claude` is **private**. Pages from a private repo needs GitHub Pro
+> (and the published site is public regardless). If you would rather not pay for
+> that, either make this repo public or move `tp-surfcast2/` and
+> `.github/workflows/forecast.yml` into a new public repo &mdash; only forecast data
+> is published, so there is nothing sensitive in it.
+>
+> Until Pages is set up, the `publish` job fails on its own while the `build`
+> job keeps fetching and committing forecast data. That is by design.
 
 ## Running it locally
 
