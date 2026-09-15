@@ -265,3 +265,23 @@ test('wetsuit call tracks water temperature', () => {
   assert.match(wetsuitCall(54, 52, 5).call, /4\/3/);
   assert.equal(wetsuitCall(null).waterF, null);
 });
+
+/* ------------------------------------------- confidence, from live data --- */
+
+test('a small day with models a few inches apart is NOT flagged as disagreement', () => {
+  // Regression: the first week of live data flagged every day of a flat spell
+  // "models disagree" because spread was measured as a fraction of the height.
+  const faces = [1.1, 1.25, 1.3];              // three models, knee high
+  const spread = Math.max(...faces) - Math.min(...faces);
+  const meaningful = Math.max(0, spread - 0.4);
+  const confidence = Math.max(0, Math.min(1, 1 - 0.35 * meaningful - 8 / 120));
+  assert.ok(confidence > 0.55, `flat-week confidence was ${confidence}`);
+});
+
+test('models genuinely far apart still drop confidence', () => {
+  const faces = [3.0, 5.4, 6.2];
+  const spread = Math.max(...faces) - Math.min(...faces);
+  const meaningful = Math.max(0, spread - 0.4);
+  const confidence = Math.max(0, Math.min(1, 1 - 0.35 * meaningful - 25 / 120));
+  assert.ok(confidence < 0.55, `real disagreement scored ${confidence}`);
+});

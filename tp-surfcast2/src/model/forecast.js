@@ -161,11 +161,21 @@ export function buildHourly({ marine, weather, tides, biasByModel }) {
     const dirDeg = circMean(modelNames.map((m) => entry.models[m].dominantDirDeg));
     const deepHsM = median(modelNames.map((m) => entry.models[m].deepHsM)) ?? 0;
 
-    // Model disagreement -> confidence. Height spread relative to the median,
-    // plus directional spread, both of which flip a day's character.
-    const hSpread = HbM > 0.05 ? (Math.max(...HbList) - Math.min(...HbList)) / HbM : 0;
+    // Model disagreement -> confidence, judged in FACE FEET rather than as a
+    // percentage of the height.
+    //
+    // Scoring it relatively was wrong and the first week of live data proved
+    // it: three models landing within two tenths of a foot of each other on a
+    // knee-high day is near-perfect agreement, but as a fraction of a 1.2 ft
+    // day it looks like a 20% spread, so every single day of a small week came
+    // back flagged "models disagree". A flag that fires on every day carries no
+    // information. Absolute spread is what a surfer actually cares about:
+    // whether the models could be arguing about something that changes the call.
+    const faceList = modelNames.map((m) => faceHeights(entry.models[m].HbM).typicalFt);
+    const faceSpreadFt = Math.max(...faceList) - Math.min(...faceList);
+    const meaningfulSpreadFt = Math.max(0, faceSpreadFt - 0.4); // under ~5 in is noise
     const dSpread = circSpread(modelNames.map((m) => entry.models[m].dominantDirDeg));
-    const confidence = Math.max(0, Math.min(1, 1 - 0.9 * hSpread - dSpread / 90));
+    const confidence = Math.max(0, Math.min(1, 1 - 0.35 * meaningfulSpreadFt - dSpread / 120));
 
     const windModels = Object.keys(wind.models);
     const windKt = median(windModels.map((m) => wind.models[m].windKt)) ?? 0;
@@ -221,10 +231,8 @@ export function buildHourly({ marine, weather, tides, biasByModel }) {
       partitions: entry.models[modelNames[0]]?.parts ?? [],
       confidence,
       modelSpread: {
-        heightFt: modelNames.map((m) => ({
-          model: m, faceFt: faceHeights(entry.models[m].HbM).typicalFt,
-        })),
-        relHeightSpread: hSpread,
+        heightFt: modelNames.map((m, i) => ({ model: m, faceFt: faceList[i] })),
+        faceSpreadFt,
         dirSpreadDeg: dSpread,
       },
     });

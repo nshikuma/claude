@@ -47,8 +47,15 @@ function normaliseTimes(times, offsetSeconds) {
   });
 }
 
-/** Per-model hourly wave forecasts out to the outlook horizon. */
-export async function fetchMarine({ days = FORECAST_DAYS.outlook + 1 } = {}) {
+/**
+ * Per-model hourly wave forecasts out to the outlook horizon.
+ *
+ * `pastDays` is not cosmetic: the buoy bias correction compares each model
+ * against the last 24 h of measurements, so a model that returns only future
+ * hours has nothing to be measured against and silently goes uncorrected. That
+ * is exactly what happened to GFS-Wave on the first live runs.
+ */
+export async function fetchMarine({ days = FORECAST_DAYS.outlook + 1, pastDays = 2 } = {}) {
   const models = SOURCES.waveModels;
   const q = new URLSearchParams({
     latitude: String(SITE.lat),
@@ -57,6 +64,7 @@ export async function fetchMarine({ days = FORECAST_DAYS.outlook + 1 } = {}) {
     models: models.join(','),
     timezone: SITE.timezone,
     forecast_days: String(days),
+    past_days: String(pastDays),
     cell_selection: 'sea',
   });
   const j = await getJson(`${SOURCES.marine}?${q}`, { label: 'openmeteo:marine' });
