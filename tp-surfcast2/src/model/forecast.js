@@ -97,14 +97,26 @@ export function computeModelBias(buoyRecords, modelHours, { hoursBack = 24 } = {
 function breakingForHour(h, bias) {
   const parts = [];
   const push = (p, kind) => {
-    if (!p || !(p.hsM > 0.02) || !(p.periodS > 0)) return;
-    const r = transformToBreak(p.hsM * bias, p.periodS, p.dirDeg ?? h.dirDeg, { origin: 'model' });
-    if (r.Hb > 0) parts.push({ ...r, HbM: r.Hb, periodS: p.periodS, dirDeg: p.dirDeg ?? h.dirDeg, kind });
+    if (!p || !(p.hsM > 0.02)) return;
+    // A partition that is missing its own period still counts: fall back to the
+    // overall period for the hour. GFS-Wave publishes partition heights without
+    // partition periods, and requiring both silently reduced that whole model to
+    // zero on every hour.
+    const T = p.periodS > 0 ? p.periodS : (h.periodS > 0 ? h.periodS : null);
+    if (!T) return;
+    const r = transformToBreak(p.hsM * bias, T, p.dirDeg ?? h.dirDeg, { origin: 'model' });
+    if (r.Hb > 0) parts.push({ ...r, HbM: r.Hb, periodS: T, dirDeg: p.dirDeg ?? h.dirDeg, kind });
   };
   push(h.swell, 'groundswell');
   push(h.windSea, 'windswell');
   // If the model gave no partitions, fall back to the total sea state.
   if (!parts.length) push({ hsM: h.hsM, periodS: h.periodS, dirDeg: h.dirDeg }, 'total');
+
+  // Nothing usable from this model this hour. Returning null keeps it OUT of
+  // the ensemble entirely; returning a zero would let it vote, and a zero in a
+  // three-model median drags the forecast down by a foot while looking like
+  // genuine disagreement rather than missing data.
+  if (!parts.length) return null;
 
   const combined = combinePartitions(parts);
   const dom = combined.dominant;
@@ -139,14 +151,20 @@ export function buildHourly({ marine, weather, tides, biasByModel }) {
 
   // Index waves by UTC hour, per model.
   const waveIndex = new Map();
+  const modelHourCounts = {};
   for (const [model, rows] of Object.entries(marine.byModel)) {
     const bias = biasByModel?.[model]?.factor ?? 1;
+    modelHourCounts[model] = 0;
     for (const r of rows) {
+      const broken = breakingForHour(r, bias);
+      if (!broken) continue;              // model contributed nothing this hour
       const key = new Date(r.time).setMinutes(0, 0, 0);
       if (!waveIndex.has(key)) waveIndex.set(key, { stamps: r, models: {} });
-      waveIndex.get(key).models[model] = { ...breakingForHour(r, bias), raw: r };
+      waveIndex.get(key).models[model] = { ...broken, raw: r };
+      modelHourCounts[model]++;
     }
   }
+  buildHourly.lastModelHourCounts = modelHourCounts;
 
   const hours = [];
   for (const [key, entry] of [...waveIndex.entries()].sort((a, b) => a[0] - b[0])) {
@@ -155,6 +173,7 @@ export function buildHourly({ marine, weather, tides, biasByModel }) {
     const iso = new Date(key).toISOString();
 
     const modelNames = Object.keys(entry.models);
+    if (!modelNames.length) continue;
     const HbList = modelNames.map((m) => entry.models[m].HbM);
     const HbM = median(HbList) ?? 0;
     const periodS = median(modelNames.map((m) => entry.models[m].dominantPeriodS)) ?? 0;

@@ -327,6 +327,10 @@ async function main() {
 
   await writeFile(path.join(DATA, 'diagnostics.json'), JSON.stringify({
     generatedAt: startedAt, synthetic: SYNTHETIC, errors, trace, biasByModel,
+    // Hours each wave model actually contributed. A model far below the others
+    // is abstaining rather than forecasting - that is how the GFS-Wave outage
+    // was caught, and it would otherwise be invisible.
+    modelHourCounts: buildHourly.lastModelHourCounts ?? {},
     counts: {
       buoyRecords: data.buoy?.records?.length ?? 0,
       spectrumBands: data.spectrum?.bands?.length ?? 0,

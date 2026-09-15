@@ -285,3 +285,22 @@ test('models genuinely far apart still drop confidence', () => {
   const confidence = Math.max(0, Math.min(1, 1 - 0.35 * meaningful - 25 / 120));
   assert.ok(confidence < 0.55, `real disagreement scored ${confidence}`);
 });
+
+/* --------------------------------- a model with no usable data must abstain -- */
+
+test('a partition without its own period falls back to the hour period', () => {
+  // GFS-Wave publishes partition heights with null partition periods. Requiring
+  // both silently zeroed that model on every hour of a live week.
+  const r = transformToBreak(0.9, 11, 280, { origin: 'model' });
+  assert.ok(r.Hb > 0, 'the fallback period must still produce a breaking wave');
+});
+
+test('a zero must never be averaged into the model ensemble', () => {
+  // Regression: one model contributing 0 ft pulled the median of
+  // [2.80, 0.00, 1.86] down to 1.86 instead of 2.33, under-forecasting by half
+  // a foot while looking like genuine model disagreement.
+  const withZero = median([2.80, 0.00, 1.86]);
+  const withoutZero = median([2.80, 1.86]);
+  assert.equal(withZero, 1.86);
+  assert.ok(withoutZero > withZero + 0.4, 'dropping the abstaining model must matter');
+});
