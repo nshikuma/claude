@@ -74,6 +74,9 @@ jobs:
           github-token: ${{ github.token }}
           genome-url: ${{ secrets.GENOME_URL }}
           gff-url: ${{ secrets.GFF_URL }}
+          data-repo: ${{ vars.DATA_REPO }}
+          data-token: ${{ secrets.DATA_TOKEN }}
+          lab-key: ${{ secrets.LAB_KEY }}
           db-version: ${{ vars.DB_VERSION || '1' }}
           species: ${{ vars.SPECIES || 'Hydroides elegans' }}
           assembly: ${{ vars.ASSEMBLY || '' }}
@@ -87,6 +90,7 @@ jobs:
           ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
           ISSUE_CREATED: ${{ github.event.issue.created_at }}
           SITE_URL: ${{ vars.SITE_URL }}
+          LAB_KEY: ${{ secrets.LAB_KEY }}
           DB_DIR: blastdb
           OUT_DIR: out
         run: |
@@ -94,20 +98,26 @@ jobs:
             owner="${GITHUB_REPOSITORY%%/*}"; repo="${GITHUB_REPOSITORY#*/}"
             export SITE_URL="https://${owner,,}.github.io/${repo}"
           fi
-          python3 scripts/run_blast.py
+          /usr/bin/python3 scripts/run_blast.py
 
       - name: Publish results for the website
         if: steps.auth.outputs.ok == 'yes'
+        env:
+          LAB_KEY: ${{ secrets.LAB_KEY }}
         run: |
           mkdir -p publish
           cp -R out/results publish/
-          cp blastdb/info.json publish/info.json
+          bash scripts/publish_info.sh blastdb/info.json publish
           bash scripts/publish.sh publish "Results for search #$NUMBER"
 
       - name: Report on the issue
         if: steps.auth.outputs.ok == 'yes'
         run: |
           status=$(cat out/status)
+          if [ -e out/scrub ]; then
+            # Private mode: someone pasted plain sequences into an issue. Remove them.
+            gh issue edit "$NUMBER" --title "BLAST: removed" --body "_Removed: this BLAST server is private, so searches must be submitted from the website._"
+          fi
           gh issue comment "$NUMBER" --body-file out/comment.md
           gh issue edit "$NUMBER" --remove-label "blast: running" --add-label "blast: $status"
           if [ "$status" = done ]; then

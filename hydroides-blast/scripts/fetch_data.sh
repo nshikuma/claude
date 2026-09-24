@@ -5,8 +5,10 @@
 #   1. GENOME_URL / GFF_URL  (repository secrets) - any direct-download link.
 #      Use this to keep the genome file itself private.
 #   2. Assets attached to the GitHub release named $RELEASE_TAG (default
-#      "genome-data"): the FASTA (*.fa, *.fasta, *.fna, optionally .gz) and the
-#      annotation (*.gff, *.gff3, *.gtf, optionally .gz).
+#      "genome-data") in $DATA_REPO: the FASTA (*.fa, *.fasta, *.fna,
+#      optionally .gz) and the annotation (*.gff, *.gff3, *.gtf, optionally .gz).
+#      DATA_REPO can be a separate PRIVATE repository (GH_TOKEN must be able to
+#      read it); by default it is this repository.
 #
 # Writes input/genome and input/annotation (the latter only if found).
 set -euo pipefail
@@ -22,7 +24,7 @@ if [ -n "${GENOME_URL:-}" ]; then
   fi
 else
   echo "Downloading assets of release '$tag'"
-  gh release download "$tag" --dir input/release --clobber
+  gh release download "$tag" --repo "${DATA_REPO:-$GITHUB_REPOSITORY}" --dir input/release --clobber
   for f in input/release/*; do
     lower=$(basename "$f" | tr '[:upper:]' '[:lower:]')
     case "$lower" in
@@ -33,7 +35,7 @@ else
 fi
 
 if [ ! -s input/genome ]; then
-  echo "::error::No genome found. Attach genome.fa(.gz) to a release tagged '$tag' or set the GENOME_URL secret."
+  echo "::error::No genome found. Attach genome.fa(.gz) to a release tagged '$tag' (see README) or set the GENOME_URL secret."
   exit 1
 fi
 # A common mistake is a sharing-page link that returns HTML instead of the file.
@@ -42,4 +44,4 @@ if head -c 200 input/genome | grep -qi "<html\|<!doctype"; then
   exit 1
 fi
 [ -s input/annotation ] || echo "::warning::No GFF/GTF annotation found; only the genome database will be built."
-ls -la input
+ls -la input | awk '{print $5, $9}' 

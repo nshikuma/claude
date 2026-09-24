@@ -27,6 +27,22 @@
   <div id="banner" class="wrap" hidden></div>
 
   <main class="wrap">
+    <!-- ================= UNLOCK (private mode) ================= -->
+    <section id="view-unlock" class="view" hidden>
+      <form id="unlock-form" class="panel center" autocomplete="on">
+        <div class="big-icon">🔒</div>
+        <h2>Lab members only</h2>
+        <p class="lead">This genome isn't public yet. Enter the lab passphrase to search it.</p>
+        <input type="text" name="username" value="lab" autocomplete="username" hidden>
+        <p><input type="password" id="unlock-pass" autocomplete="current-password" placeholder="Lab passphrase" class="unlock-input" aria-label="Lab passphrase"></p>
+        <p class="small"><label><input type="checkbox" id="unlock-remember" checked> Remember on this computer</label></p>
+        <p id="unlock-error" class="notice error" hidden></p>
+        <p><button class="btn btn-primary btn-big" id="unlock-btn" type="submit">Unlock</button></p>
+        <p class="muted small">Searches and results are encrypted with this passphrase, so only people who have it can read them.
+          You'll also need a GitHub account with access to run searches. <a href="#/job/demo-tblastn">See demo results</a>.</p>
+      </form>
+    </section>
+
     <!-- ================= SEARCH ================= -->
     <section id="view-search" class="view" hidden>
       <form id="search-form" autocomplete="off" novalidate>
@@ -162,7 +178,7 @@
       <h2>Good to know</h2>
       <ul>
         <li>Searches run on GitHub's servers using the official NCBI BLAST+ programs, so results match a local BLAST.</li>
-        <li>Each search is a GitHub issue. Searches and results are visible to anyone who can see this repository.</li>
+        <li>Each search is a GitHub issue. On a private lab server (one that asks for a passphrase) searches and results are encrypted, so only people with the passphrase can read them; otherwise they are public.</li>
         <li>Limits per search: 25 sequences; 200 kb total for blastn, 50 kb for blastx/blastp, 20 kb for tblastn, 10 kb for tblastx.</li>
         <li>The first search after the genome is updated can take ~10–20 minutes while the databases are rebuilt.</li>
       </ul>

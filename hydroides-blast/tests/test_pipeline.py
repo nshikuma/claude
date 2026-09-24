@@ -19,6 +19,7 @@ ROOT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 sys.path.insert(0, HERE)
 
+import labcrypt  # noqa: E402
 import make_test_data  # noqa: E402
 import run_blast  # noqa: E402
 
@@ -56,15 +57,27 @@ class Pipeline(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.tmp)
 
-    def run_job(self, body):
+    def run_job(self, body, lab_key=None):
         Pipeline.n += 1
         out = os.path.join(self.tmp, "out%d" % self.n)
         env = dict(os.environ, ISSUE_BODY=body, ISSUE_NUMBER=str(self.n), ISSUE_AUTHOR="tester",
                    DB_DIR=self.db, OUT_DIR=out, SITE_URL="https://example.github.io/blast")
-        subprocess.run([sys.executable, os.path.join(ROOT, "scripts", "run_blast.py")], env=env, check=True,
-                       capture_output=True)
-        with open(os.path.join(out, "results", str(self.n), "result.json")) as fh:
-            res = json.load(fh)
+        env.pop("LAB_KEY", None)
+        if lab_key:
+            env["LAB_KEY"] = lab_key
+        proc = subprocess.run([sys.executable, os.path.join(ROOT, "scripts", "run_blast.py")], env=env, check=True,
+                              capture_output=True, text=True)
+        res_dir = os.path.join(out, "results", str(self.n))
+        if lab_key:
+            files = os.listdir(res_dir)
+            self.assertTrue(files and all(f.endswith(".enc") for f in files), files)
+            with open(os.path.join(res_dir, "result.json.enc")) as fh:
+                res = json.loads(labcrypt.decrypt(fh.read(), lab_key))
+            res["_log"] = proc.stdout + proc.stderr
+            res["_scrub"] = os.path.exists(os.path.join(out, "scrub"))
+        else:
+            with open(os.path.join(res_dir, "result.json")) as fh:
+                res = json.load(fh)
         with open(os.path.join(out, "comment.md")) as fh:
             res["_comment"] = fh.read()
         return res
@@ -136,10 +149,44 @@ class Pipeline(unittest.TestCase):
             self.assertIn(msg, res["error"])
             self.assertIn("could not run", res["_comment"])
 
+    def test_private_mode(self):
+        key = "correct horse battery staple"
+        wrapped = lambda body, k=key: "Submitted from the website.\n\n%s\n%s\n%s\n" % (
+            labcrypt.MARKER, labcrypt.encrypt(body, k), labcrypt.END_MARKER)
+        res = self.run_job(wrapped(issue_body("blastp", "proteins", ">secret_query\n" + H3_PEP)), lab_key=key)
+        self.assertEqual(self.top(res)["id"], "HELE_000101-RA")
+        self.assertNotIn("HELE", res["_comment"])          # the public comment says nothing
+        self.assertNotIn("secret_query", res["_log"])      # nor does the public log
+        self.assertNotIn("HELE", res["_log"])
+        # plain sequences on a private server: refused and flagged for removal
+        res = self.run_job(issue_body("blastp", "proteins", H3_PEP), lab_key=key)
+        self.assertEqual(res["status"], "failed")
+        self.assertTrue(res["_scrub"])
+        self.assertIn("text of this issue has been removed", res["_comment"])
+        # old passphrase
+        res = self.run_job(wrapped(issue_body("blastp", "proteins", H3_PEP), "old passphrase"), lab_key=key)
+        self.assertIn("could not be decrypted", res["error"])
+        # encrypted request sent to a server that isn't private
+        res = self.run_job(wrapped(issue_body("blastp", "proteins", H3_PEP)))
+        self.assertIn("not in private mode", res["error"])
+
     def test_info(self):
         self.assertEqual(self.info["databases"]["genome"]["sequences"], 3)
         self.assertEqual(self.info["databases"]["proteins"]["sequences"], 3)
         self.assertTrue(self.info["examples"]["protein"]["seq"])
+
+
+class Crypto(unittest.TestCase):
+    def test_round_trip_and_wrong_key(self):
+        env = labcrypt.encrypt("ACGT" * 1000, "pw")
+        self.assertEqual(labcrypt.decrypt(env, "pw"), b"ACGT" * 1000)
+        with self.assertRaises(labcrypt.DecryptError):
+            labcrypt.decrypt(env, "nope")
+
+    def test_envelope_survives_line_wrapping(self):
+        env = labcrypt.encrypt("hello", "pw")
+        body = "x\n%s\n%s\n%s\n" % (labcrypt.MARKER, "\n".join(env[i:i + 60] for i in range(0, len(env), 60)), labcrypt.END_MARKER)
+        self.assertEqual(labcrypt.decrypt(labcrypt.find_envelope(body), "pw"), b"hello")
 
 
 class Parsing(unittest.TestCase):

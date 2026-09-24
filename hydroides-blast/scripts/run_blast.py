@@ -9,12 +9,16 @@ nothing a user types is ever interpreted by a shell):
     OUT_DIR       where to write results/<issue>/... and comment.md
     SITE_URL      website base URL, used for the link in the comment
     BLAST_THREADS optional, default = CPU count
+    LAB_KEY       optional lab passphrase. When set ("private mode") the request
+                  must be encrypted by the website, and every result file is
+                  written encrypted (*.enc), so nothing readable is published.
 
 Exit status is 0 whether the search succeeded or the request was invalid; the
 outcome is in OUT_DIR/status (``done`` or ``failed``).
 """
 
 import bisect
+import glob
 import json
 import os
 import re
@@ -391,6 +395,43 @@ def comment_markdown(result, link):
     return "\n".join(lines)
 
 
+def request_text(body, lab_key, out_dir):
+    """The request as '### Heading' text, decrypting it in private mode."""
+    import labcrypt
+    envelope = labcrypt.find_envelope(body)
+    if not lab_key:
+        if envelope:
+            raise RequestError("This request is encrypted, but this BLAST server is not in private mode (no LAB_KEY secret).")
+        return body
+    if envelope is None:
+        # Plain sequences in a private server's issue: have the workflow wipe them.
+        open(os.path.join(out_dir, "scrub"), "w").close()
+        raise RequestError("This BLAST server is private. Submit searches from the website, which encrypts them.")
+    try:
+        return labcrypt.decrypt(envelope, lab_key).decode("utf-8")
+    except labcrypt.DecryptError:
+        raise RequestError("The request could not be decrypted: the lab passphrase has probably changed. "
+                           "Re-enter the current passphrase on the website and submit again.")
+
+
+def encrypt_results(res_dir, lab_key):
+    import labcrypt
+    for path in glob.glob(os.path.join(res_dir, "*")):
+        if not path.endswith(".enc"):
+            labcrypt.encrypt_file(path, path + ".enc", lab_key)
+            os.remove(path)
+
+
+def private_comment(result, link, scrubbed):
+    if scrubbed:
+        return ("### 🔒 This BLAST server is private\n\nSearches have to be submitted from the "
+                "[website](%s), which encrypts them. The text of this issue has been removed." % link.split("#")[0])
+    where = "[Open the results](%s) (needs the lab passphrase)" % link if link else "Open the results on the website"
+    if result["status"] == "done":
+        return "### ✅ BLAST results are ready\n\n**%s**" % where
+    return "### ❌ This search could not run\n\n%s to see why." % where.replace("Open the results", "Open the search")
+
+
 def main():
     env = os.environ
     number = env.get("ISSUE_NUMBER", "0")
@@ -403,9 +444,10 @@ def main():
     link = "%s/#/job/%s" % (site, number) if site else ""
     result = {"job": int(number), "submitted_by": env.get("ISSUE_AUTHOR", ""),
               "submitted": env.get("ISSUE_CREATED", ""), "finished": None}
+    lab_key = env.get("LAB_KEY", "")
     t0 = time.time()
     try:
-        opts = parse_request(env.get("ISSUE_BODY", ""))
+        opts = parse_request(request_text(env.get("ISSUE_BODY", ""), lab_key, out_dir))
         with open(os.path.join(db_dir, "info.json")) as fh:
             info = json.load(fh)
         if opts["database"] not in info["databases"]:
@@ -451,11 +493,17 @@ def main():
     result["finished"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     with open(os.path.join(res_dir, "result.json"), "w") as fh:
         json.dump(result, fh, separators=(",", ":"))
+    if lab_key:
+        encrypt_results(res_dir, lab_key)
+        comment = private_comment(result, link, os.path.exists(os.path.join(out_dir, "scrub")))
+    else:
+        comment = comment_markdown(result, link)
     with open(os.path.join(out_dir, "comment.md"), "w") as fh:
-        fh.write(comment_markdown(result, link) + "\n")
+        fh.write(comment + "\n")
     with open(os.path.join(out_dir, "status"), "w") as fh:
         fh.write(result["status"])
-    print("status:", result["status"], result.get("error", ""))
+    # In private mode the Actions log is public, so keep error details out of it.
+    print("status:", result["status"], "" if lab_key else result.get("error", ""))
 
 
 if __name__ == "__main__":

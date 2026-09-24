@@ -9,6 +9,8 @@ entirely on GitHub. It covers the gap until the assembly is on NCBI.
 - **Genome hits are labelled with genes**: the overlapping annotated gene, or the nearest gene if the hit is intergenic
 - NCBI-style results page: hit graphic, sortable/filterable hit table, full alignments,
   downloads (text alignments, TSV for Excel, hit sequences as FASTA), "edit & resubmit"
+- **Private lab mode**: the genome stays in a private repository, and searches and results are encrypted
+  with a lab passphrase, so nothing about the genome is public before publication
 - Works on phones, has a dark mode, and needs no server or hosting bill
 
 ## How it works
@@ -30,17 +32,32 @@ on GitHub's servers. For a public repository all of this is free.
 
 What this means for the person searching:
 
-- They need a free **GitHub account** (signed in) to submit searches. Looking at results needs no account.
+- They need a free **GitHub account** (signed in) to submit searches, plus the lab passphrase in private mode.
 - After pressing **BLAST**, GitHub opens in a new tab with the search filled in. They click **Create**, and
   the website then shows progress and the results. A search usually takes **1–3 minutes**.
 - GitHub also emails them when the results comment is posted.
 
-## Setup (about 15 minutes)
+## Setup (about 20 minutes)
 
-### 1. Create the repository
+These steps set the site up in **private lab mode**: the genome and every search stay private until
+publication, while the website itself stays free on GitHub Pages. (To run it fully public instead, see
+[Public mode](#public-mode-after-publication).)
 
-Create a new **public** repository (e.g. `hydroides-blast`) and copy everything
-in this folder into it, including the hidden `.github` folder:
+### What stays private
+
+| | Who can see it |
+|---|---|
+| Genome FASTA and GFF | Nobody. They live in a separate **private** repository |
+| The website page itself (search form, help) | Anyone with the link. It contains no genome data |
+| Genome stats, example sequences | Only people with the **lab passphrase** |
+| Searches (the query sequences) and results | Only people with the **lab passphrase**. GitHub stores only encrypted text |
+| Running searches | Only the GitHub usernames you list |
+| That a search happened, who ran it, when | Public (the issue titles just say "BLAST: lab search") |
+
+### 1. Create the website repository
+
+Create a new **public** repository (e.g. `hydroides-blast`) and copy everything in this folder into it,
+including the hidden `.github` folder:
 
 ```bash
 git clone https://github.com/YOUR-USER/hydroides-blast.git
@@ -48,51 +65,70 @@ cp -R path/to/this/hydroides-blast/. hydroides-blast/
 cd hydroides-blast && git add -A && git commit -m "BLAST site" && git push
 ```
 
-(GitHub Pages is only free on public repositories. With GitHub Pro/Team a private repo works too,
-but then Actions minutes are limited to your plan's allowance.)
+It has to be public for free GitHub Pages hosting. That's fine, because it contains only code, and
+everything about the genome is encrypted.
 
-### 2. Upload the genome and annotation
+### 2. Put the genome in a separate private repository
 
-Option A, simplest: attach them to a release.
-
-1. On the repo page, go to **Releases → Draft a new release**.
-2. Under **Choose a tag**, type `genome-data` and create the tag.
-3. Drag in the genome FASTA and the GFF3/GTF. Gzip them first to save time (`gzip genome.fa`).
-   Recognised names: `*.fa`, `*.fasta`, `*.fna`, `*.fas` for the genome and `*.gff`, `*.gff3`, `*.gtf` for
-   the annotation, each optionally `.gz`. Release files can be up to 2 GB each.
+1. Create a second repository, e.g. `hydroides-genome-data`, and set it to **Private**.
+2. Go to its **Releases → Draft a new release**. Under *Choose a tag*, type `genome-data` and create the tag.
+3. Drag in the genome FASTA and the GFF3/GTF. Gzip them first (`gzip genome.fa`); each file can be up to 2 GB.
+   Recognised names: `*.fa`, `*.fasta`, `*.fna`, `*.fas` for the genome and `*.gff`, `*.gff3`, `*.gtf` for the
+   annotation, each optionally `.gz`.
 4. Click **Publish release**.
 
-> ⚠️ In a public repository, **anyone can download release files**. If the
-> genome must stay private until publication, use option B instead.
+### 3. Give the website permission to read the private repository
 
-Option B, private: keep the files elsewhere. Put them anywhere that gives a direct download link
-(a university server, S3, Dropbox with `?dl=1`, and so on). Then add two
-**repository secrets** (*Settings → Secrets and variables → Actions → New repository secret*):
+Make a token that can *only read* that one repository:
+
+1. Click your profile picture → **Settings → Developer settings → Personal access tokens → Fine-grained tokens →
+   Generate new token**.
+2. Name: `hydroides-blast data`. **Expiration**: pick a date after you expect the paper to be out (you can renew it).
+3. **Repository access**: *Only select repositories* → `hydroides-genome-data`.
+4. **Permissions → Repository permissions → Contents: Read-only**. Leave everything else alone.
+5. Generate, and copy the token (it starts with `github_pat_`).
+
+### 4. Add the secrets and settings to the website repository
+
+In the **website** repository: *Settings → Secrets and variables → Actions*.
+
+On the **Secrets** tab, click *New repository secret* for each of these:
 
 | Secret | Value |
 |---|---|
-| `GENOME_URL` | direct link to the genome FASTA (optionally gzipped) |
-| `GFF_URL` | direct link to the GFF3/GTF |
+| `DATA_TOKEN` | the token from step 3 |
+| `LAB_KEY` | the lab passphrase (see below) |
 
-Secrets are hidden from everyone, including the workflow logs. Visitors can only see the sequence of the
-regions their searches hit, just as on any BLAST server.
+On the **Variables** tab, click *New repository variable* for each of these:
 
-### 3. Turn on the website
+| Variable | Value |
+|---|---|
+| `DATA_REPO` | `YOUR-USER/hydroides-genome-data` |
+| `ALLOWED_USERS` | GitHub usernames allowed to run searches, comma-separated, e.g. `yourlogin,postdoclogin` |
+
+**Choosing the passphrase:** everything published is encrypted with it, so make it long. Four or five random
+words (`tidal-copper-worm-lantern-basil`) is good. Anyone with the passphrase can read results, so share it
+in person or over a private channel, not by email to a list.
+
+Then, as a precaution: *Settings → Actions → General → Fork pull request workflows from outside collaborators* →
+**Require approval for all outside collaborators** → Save.
+
+### 5. Turn on the website
 
 *Settings → Pages → Build and deployment*: Source **Deploy from a branch**, Branch **main**, folder
 **/docs** → Save. After a minute the site is live at `https://YOUR-USER.github.io/hydroides-blast/`.
 
-### 4. Build the databases
+### 6. Build the databases
 
-*Actions tab → **Build BLAST databases** → Run workflow*. For a ~1 Gb genome this takes roughly
-10–20 minutes. When it's green, the website shows the genome stats, and the example buttons use real
-sequences from your genome.
+*Actions tab → **Build BLAST databases** → Run workflow*. If GitHub asks you to enable workflows, click the
+button to enable them. For a ~1 Gb genome this takes roughly 10–20 minutes.
 
-(If GitHub asks you to enable workflows on the Actions tab, click the button to enable them.)
+### 7. Try it, then invite the lab
 
-### 5. Try it, then send the link to your postdoc
-
-Run one search yourself. The first search after a build takes a little longer.
+Open the site, enter the passphrase and run a search. Then send lab members:
+- the website link and the passphrase, and
+- a request for their GitHub username, which you add to `ALLOWED_USERS`. They need a free GitHub account.
+  They do **not** need access to either repository.
 
 ## Settings (optional)
 
@@ -100,7 +136,7 @@ Run one search yourself. The first search after a build takes a little longer.
 
 | Variable | Effect |
 |---|---|
-| `ALLOWED_USERS` | Who may run searches. Empty = anyone with a GitHub account. `collaborators` = only people you've added to the repo (*Settings → Collaborators*). Or a comma-separated list of GitHub usernames, e.g. `mylogin,postdoc-login`. |
+| `ALLOWED_USERS` | Who may run searches. A comma-separated list of GitHub usernames; or `collaborators` (anyone you add under *Settings → Collaborators*); or empty for anyone with a GitHub account |
 | `ASSEMBLY` | Assembly name/version shown on the site, e.g. `HelegV1.0` |
 | `SPECIES` | Defaults to `Hydroides elegans` |
 | `SITE_URL` | Only needed with a custom domain |
@@ -108,26 +144,47 @@ Run one search yourself. The first search after a build takes a little longer.
 
 Also edit `docs/config.js` for the site title and a lab name in the footer.
 
-**Updating the genome:** replace the files on the `genome-data` release (or the files behind the URLs,
-then bump `DB_VERSION`), and run **Build BLAST databases** again. The databases rebuild automatically
-when the release files change.
+**Updating the genome:** replace the files on the `genome-data` release in the private data repository, then
+run **Build BLAST databases** again. It notices the new files and rebuilds.
+
+**Someone leaves the lab:** remove their username from `ALLOWED_USERS`, which stops them running searches. To
+stop them reading *new* results as well, change `LAB_KEY` and tell the lab the new passphrase. Also bump
+`DB_VERSION`, because the cached databases are encrypted with the old passphrase. Old results stay readable
+only with the old passphrase.
+
+**The token expires:** make a new one (step 3) and replace the `DATA_TOKEN` secret.
+
+## Public mode (after publication)
+
+Once the genome is public, you can drop the passphrase:
+
+1. Delete the `LAB_KEY` secret, bump `DB_VERSION`, and run **Build BLAST databases**.
+2. Optionally clear `ALLOWED_USERS` so anyone can search.
+
+If you never set `LAB_KEY`, the site runs in public mode from the start. In that mode, searches and results
+are readable by anyone. You can also put the genome release in the website repository itself (then you
+don't need `DATA_REPO` or `DATA_TOKEN`), but anyone can download it from there. The `GENOME_URL`/`GFF_URL`
+secrets are a third option: any direct-download links, fetched privately.
+
+> ⚠️ Set `LAB_KEY` **before** the first build or search. Anything published before private mode was on
+> stays in the repository history.
 
 ## Things to know
 
-- **Everything in a public repo is public**: the searches (issues) and their results (the
-  `blast-results` branch). Set `ALLOWED_USERS` to stop strangers running searches.
+- **What the public log shows:** in private mode, the Actions logs (public for a public repository) contain no
+  sequences, gene names or genome stats. A search posted by mistake as plain text directly on GitHub (not via
+  the website) is refused and its text is removed. GitHub keeps the removed text in the issue's edit history,
+  which you can delete from the issue page (*edited* → select a revision → *Delete revision from history*).
 - **Search limits** (set in `scripts/run_blast.py`): 25 sequences per search; total query length up
   to 200 kb for blastn, 50 kb for blastp/blastx, 20 kb for tblastn, and 10 kb for tblastx (which is slow on
   a large genome). Searches are stopped after ~100 minutes.
 - **Speed**: GitHub's free runners have 4 CPUs and 16 GB of RAM. Each search spends ~30–60 s starting
   up, then BLAST itself runs. Several searches can run at the same time.
-- **Database cache**: the built databases are kept in the GitHub Actions cache. GitHub deletes caches that go
-  unused for 7 days, so a weekly job keeps it warm. If it's ever missing, the next search simply rebuilds it
-  (and takes longer).
+- **Database cache**: the built databases are kept, encrypted in private mode, in the GitHub Actions cache.
+  GitHub deletes caches that go unused for 7 days, so a weekly job keeps it warm. If it's ever missing, the next
+  search rebuilds it (and takes longer).
 - **Rate limit**: the results page checks GitHub for progress, and GitHub allows about 60 checks per hour
-  per network. That's plenty for a lab, and the page tells you if you hit it. Results on the GitHub issue are
-  never affected.
-- **Searching without the website**: open an issue with the **BLAST search** template. It's the same form.
+  per network. That's plenty for a lab, and the page tells you if you hit it.
 - **Demo results** from a small synthetic genome are at `…/#/job/demo-tblastn`. They are handy for showing people
   what results look like before the real genome is loaded.
 
@@ -141,8 +198,9 @@ when the release files change.
 | `.github/actions/blastdb/` | Shared step: install BLAST+, restore or build databases |
 | `scripts/build_db.py` | Genome + GFF → BLAST databases, gene index, stats |
 | `scripts/run_blast.py` | Validates a request, runs BLAST, writes results and the issue comment |
+| `scripts/labcrypt.py` | Lab-passphrase encryption (AES-256-GCM), matching the website's Web Crypto code |
 | `tests/` | End-to-end tests on a synthetic genome (`python3 tests/test_pipeline.py`) |
 
-Run the tests locally with `sudo apt-get install ncbi-blast+ gffread` (or `conda install -c bioconda blast gffread`),
-then `python3 tests/test_pipeline.py`. To preview the site, run `cd docs && python3 -m http.server`
+Run the tests locally with `sudo apt-get install ncbi-blast+ gffread python3-cryptography` (or
+`conda install -c bioconda blast gffread cryptography`), then `python3 tests/test_pipeline.py`. To preview the site, run `cd docs && python3 -m http.server`
 and open http://localhost:8000. It runs in preview mode with the demo data.

@@ -264,3 +264,4 @@ dl.stats dd { margin: 0; font-variant-numeric: tabular-nums; }
   .submit-bar { justify-content: stretch; }
   table.hits .hide-sm { display: none; }
 }
+.unlock-input { width: min(100%, 340px); font-size: 1.05rem; padding: 10px 12px; text-align: center; }

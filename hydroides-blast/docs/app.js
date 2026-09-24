@@ -96,11 +96,52 @@
     if (!r.ok) { const e = new Error("HTTP " + r.status); e.status = r.status; throw e; }
     return r.json();
   }
-  async function rawText(path) {
-    const r = await fetch(RAW + "/" + path, { cache: "no-store" });
-    if (!r.ok) throw new Error("HTTP " + r.status);
+  async function rawText(path, bust) {
+    const r = await fetch(RAW + "/" + path + (bust ? "?t=" + Date.now() : ""), { cache: "no-store" });
+    if (!r.ok) { const e = new Error("HTTP " + r.status); e.status = r.status; throw e; }
     return r.text();
   }
+  // ---------------------------------------------------------------- lab passphrase (private mode)
+  // With the LAB_KEY secret set, requests and results are only ever published
+  // encrypted. Same format as scripts/labcrypt.py: PBKDF2-SHA256 -> AES-256-GCM.
+  const MARKER = "-----BEGIN LAB-ENCRYPTED-----", END_MARKER = "-----END LAB-ENCRYPTED-----";
+  let PRIVATE = false, LABKEY = null;
+  const b64d = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  const b64e = (u8) => { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+  async function aesKey(pass, salt, iterations) {
+    const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pass), "PBKDF2", false, ["deriveKey"]);
+    return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+  }
+  async function labEncrypt(text, pass = LABKEY) {
+    const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12)), iter = 250000;
+    const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await aesKey(pass, salt, iter), new TextEncoder().encode(text));
+    return JSON.stringify({ v: 1, kdf: "pbkdf2-sha256", iter, salt: b64e(salt), iv: b64e(iv), ct: b64e(new Uint8Array(ct)) });
+  }
+  async function labDecrypt(envelope, pass = LABKEY) {
+    const e = typeof envelope === "string" ? JSON.parse(envelope) : envelope;
+    const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64d(e.iv) }, await aesKey(pass, b64d(e.salt), e.iter), b64d(e.ct));
+    return new TextDecoder().decode(pt);
+  }
+  function envelopeIn(text) {
+    const i = (text || "").indexOf(MARKER);
+    if (i < 0) return null;
+    return text.slice(i + MARKER.length).split(END_MARKER)[0].replace(/\s+/g, "");
+  }
+  function savedKey() { try { return localStorage.getItem("blast.labkey") || sessionStorage.getItem("blast.labkey"); } catch (e) { return null; } }
+  function forgetKey() { try { localStorage.removeItem("blast.labkey"); sessionStorage.removeItem("blast.labkey"); } catch (e) { /* ignore */ } LABKEY = null; }
+  // A result file, decrypted if the server is private.
+  async function resultText(id, name, bust) {
+    if (!PRIVATE) return rawText(`results/${id}/${name}`, bust);
+    return labDecrypt(await rawText(`results/${id}/${name}.enc`, bust));
+  }
+  // "blastp vs proteins — my title" from a decrypted request.
+  function requestSummary(text) {
+    const sec = {};
+    text.split(/^###\s+/m).slice(1).forEach((part) => { const [h, ...rest] = part.split("\n"); sec[h.trim().toLowerCase()] = rest.join("\n").trim(); });
+    const q = ((sec["query sequences"] || "").match(/^>(\S+)/m) || [])[1] || "";
+    return `${sec.program || "?"} vs ${sec.database || "?"} — ${sec["job title"] || q}`;
+  }
+
   const isDemo = (id) => String(id).startsWith("demo-");
   const demoPath = (id) => "demo/" + id.slice(5) + "/";
 
@@ -227,7 +268,7 @@
       : `<b>${state.program}</b>${state.program === "blastn" ? " (" + $("input[name=task]:checked").value + ")" : ""} · ${a.recs.length} quer${a.recs.length > 1 ? "ies" : "y"} vs <b>${DBS[state.db].label.toLowerCase()}</b>`;
   }
 
-  function buildIssue() {
+  async function buildIssue() {
     const a = analyseQuery();
     const token = Math.random().toString(36).slice(2, 8);
     const prog = state.program;
@@ -245,15 +286,25 @@
     body += sec("Low-complexity filter", $("#filter").checked ? "yes" : "no") + "\n";
     if (title) body += sec("Job title", title) + "\n";
     body += sec("Query sequences", "```fasta\n" + fasta + "\n```");
+    if (PRIVATE) {
+      // Only ciphertext goes to GitHub; the friendly title is kept locally.
+      const env = await labEncrypt(body.replace(/^<!--.*?-->\s*/, ""));
+      return { token, title: `BLAST: lab search [${token}]`, localTitle: issueTitle,
+        body: "<!-- Encrypted search from the lab BLAST website. Click Create below to run it; please don't edit the text. -->\n\n"
+          + MARKER + "\n" + env.replace(/(.{76})/g, "$1\n") + "\n" + END_MARKER + "\n" };
+    }
     return { token, title: issueTitle, body };
   }
 
-  function submit(ev) {
+  async function submit(ev) {
     ev.preventDefault();
     updateSummary();
     if ($("#submit-btn").disabled) return;
     if (!CFG.repo) { alert("This page isn't connected to a GitHub repository yet. Set `repo` in config.js."); return; }
-    const issue = buildIssue();
+    // Browsers only allow pop-ups straight from a click, so open the tab now
+    // and point it at GitHub once the (asynchronous) encryption is done.
+    const tab = PRIVATE ? window.open("", "_blank") : null;
+    const issue = await buildIssue();
     let url = `https://github.com/${CFG.repo}/issues/new?title=${encodeURIComponent(issue.title)}&body=${encodeURIComponent(issue.body)}`;
     const note = $("#paste-note");
     note.hidden = true;
@@ -264,10 +315,11 @@
       note.innerHTML = "<b>Your sequences are long, so they were copied to your clipboard.</b> On GitHub, replace the text in the description box by pasting (Ctrl+V / ⌘V), then click Create.";
       note.hidden = false;
     }
-    const pending = { token: issue.token, title: issue.title, created: Date.now() };
+    const pending = { token: issue.token, title: issue.localTitle || issue.title, created: Date.now() };
     store("blast.pending", pending);
     store("blast.draft", null);
-    window.open(url, "_blank", "noopener");
+    if (tab) { tab.opener = null; tab.location.href = url; }
+    else window.open(url, "_blank", "noopener");
     $("#reopen-link").href = url;
     location.hash = "#/submitted";
   }
@@ -394,7 +446,7 @@
       rememberJob(issue.number, issue.title);
       const st = issueStatus(issue);
       if (st === "done" || st === "failed") {
-        try { return renderResult(await rawJSON(`results/${id}/result.json`, true), id, issue); }
+        try { return renderResult(JSON.parse(await resultText(id, "result.json", true)), id, issue); }
         catch (e) {
           if (st === "failed") return renderFailure(view, id, issue, null);
           // Just finished: the raw file can lag the label by a few seconds.
@@ -571,13 +623,13 @@
     $("#dl-btn").addEventListener("click", (e) => { e.stopPropagation(); const m = $(".dropdown-menu", view); m.hidden = !m.hidden; });
     $$(".dropdown-menu a", view).forEach((a) => a.addEventListener("click", async (e) => {
       e.preventDefault();
-      try { const r = await fetch(a.href); download(`blast-${id}-${a.dataset.file}`, await r.text()); }
+      try { download(`blast-${id}-${a.dataset.file}`, demo ? await (await fetch(a.href)).text() : await resultText(id, a.dataset.file)); }
       catch (err) { window.open(a.href, "_blank"); }
     }));
     $("#share-btn").addEventListener("click", () => copy(SITE + "#/job/" + id, "Link"));
     $("#edit-btn").addEventListener("click", async () => {
       let fasta = "";
-      try { fasta = demo ? await (await fetch(base + "query.fa")).text() : await rawText(`results/${id}/query.fa`); } catch (e) { /* leave empty */ }
+      try { fasta = demo ? await (await fetch(base + "query.fa")).text() : await resultText(id, "query.fa"); } catch (e) { /* leave empty */ }
       location.hash = "#/";
       fillForm(req, fasta.trim());
       toast("Search loaded into the form");
@@ -750,9 +802,17 @@
       const issues = (await api("/issues?state=all&sort=created&direction=desc&per_page=50")).filter((i) => !i.pull_request && /^BLAST/.test(i.title));
       all.innerHTML = (issues.length ? `<ul class="joblist">${issues.map((i) => {
         const st = issueStatus(i);
-        return `<li><a href="#/job/${i.number}"><span class="status ${st}">${st}</span><span class="jt">${esc(i.title.replace(/^BLAST:\s*/, "").replace(/\s*\[\w+\]$/, ""))}</span>
+        return `<li><a href="#/job/${i.number}"><span class="status ${st}">${st}</span><span class="jt" data-n="${i.number}">${esc(i.title.replace(/^BLAST:\s*/, "").replace(/\s*\[\w+\]$/, ""))}</span>
           <span class="jm">#${i.number} · ${esc(i.user.login)} · ${new Date(i.created_at).toLocaleDateString()}</span></a></li>`;
       }).join("")}</ul>` : `<p class="muted">No searches yet.</p>`) + demos;
+      if (PRIVATE && LABKEY) {
+        for (const i of issues) {  // one at a time: each decryption derives a key
+          const env = envelopeIn(i.body);
+          const span = $(`.jt[data-n="${i.number}"]`, all);
+          if (!env || !span) continue;
+          try { span.textContent = requestSummary(await labDecrypt(env)); } catch (e) { /* older passphrase */ }
+        }
+      }
     } catch (e) {
       all.innerHTML = `<p class="muted">${esc(e instanceof RateLimited ? e.message : "Couldn't load the list from GitHub.")} <a href="https://github.com/${esc(CFG.repo)}/issues?q=is%3Aissue+BLAST+in%3Atitle">See searches on GitHub</a>.</p>` + demos;
     }
@@ -760,7 +820,18 @@
 
   // ---------------------------------------------------------------- info, banner, footer
   async function loadInfo() {
-    try { if (!CFG.repo) throw new Error("no repo"); INFO = await rawJSON("info.json"); }
+    try {
+      if (!CFG.repo) throw new Error("no repo");
+      INFO = await rawJSON("info.json");
+      if (INFO && INFO.encrypted) {
+        PRIVATE = true; INFO = null;
+        const k = LABKEY || savedKey();
+        if (k) {
+          try { INFO = JSON.parse(await labDecrypt(await rawText("info.json.enc"), k)); LABKEY = k; }
+          catch (err) { forgetKey(); }
+        }
+      }
+    }
     catch (e) {
       if (!CFG.repo) {
         try { INFO = await (await fetch("demo/info.json")).json(); INFO.demo = true; } catch (_) { INFO = null; }
@@ -769,6 +840,8 @@
     const b = $("#banner");
     if (INFO && INFO.demo) {
       b.innerHTML = `<div class="notice info"><b>Preview mode.</b> This copy of the site isn't connected to a GitHub repository, so it shows a synthetic test genome. <a href="#/job/demo-tblastn">See demo results</a>.</div>`; b.hidden = false;
+    } else if (PRIVATE) {
+      b.hidden = true;
     } else if (!INFO) {
       b.innerHTML = `<div class="notice"><b>The genome databases haven't been built yet.</b> Searches will wait until they are (see the README's setup steps). Meanwhile, <a href="#/job/demo-tblastn">see demo results</a>.</div>`; b.hidden = false;
     }
@@ -778,7 +851,10 @@
       `Searches run with NCBI BLAST+${INFO ? " " + esc(INFO.blast_version) : ""} on GitHub Actions`,
       CFG.labName ? esc(CFG.labName) : "",
       CFG.repo ? `<a href="https://github.com/${esc(CFG.repo)}">Source &amp; searches on GitHub</a>` : "",
+      PRIVATE && LABKEY ? `🔒 Private lab server · <a href="#" id="lock-link">Lock this browser</a>` : "",
     ].filter(Boolean).join(" · ");
+    const lock = $("#lock-link");
+    if (lock) lock.addEventListener("click", (e) => { e.preventDefault(); forgetKey(); location.hash = "#/"; location.reload(); });
     if (INFO) {
       const rows = [["Species", `<i>${esc(INFO.species)}</i>`], ["Assembly", esc(INFO.assembly || "—")]];
       if (d) rows.push(["Scaffolds", fmt(d.sequences)], ["Total length", bp(d.total_length) + ` (${fmt(d.total_length)} bp)`], ["Scaffold N50", bp(d.n50)], ["GC content", d.gc_percent + "%"]);
@@ -790,6 +866,28 @@
     }
   }
 
+  function initUnlock() {
+    $("#unlock-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const pass = $("#unlock-pass").value, err = $("#unlock-error"), btn = $("#unlock-btn");
+      if (!pass) return;
+      btn.disabled = true; err.hidden = true;
+      try {
+        INFO = JSON.parse(await labDecrypt(await rawText("info.json.enc", true), pass));
+      } catch (x) {
+        btn.disabled = false; err.hidden = false;
+        err.textContent = x.status || x instanceof TypeError ? "Couldn't reach GitHub. Try again in a moment." : "That passphrase didn't work. Check it with whoever runs the site.";
+        return;
+      }
+      LABKEY = pass;
+      try { ($("#unlock-remember").checked ? localStorage : sessionStorage).setItem("blast.labkey", pass); } catch (x) { /* private window */ }
+      $("#unlock-pass").value = ""; btn.disabled = false;
+      await loadInfo();
+      updateQueryStatus();
+      route();
+    });
+  }
+
   // ---------------------------------------------------------------- router
   function route() {
     stopPolling();
@@ -798,6 +896,11 @@
     $$(".view").forEach((v) => (v.hidden = true));
     $$("nav a").forEach((a) => a.classList.remove("active"));
     const nav = (n) => { const a = $(`nav a[data-nav="${n}"]`); if (a) a.classList.add("active"); };
+    if (PRIVATE && !LABKEY && page !== "help" && !(page === "job" && isDemo(arg))) {
+      $("#view-unlock").hidden = false;
+      setTimeout(() => $("#unlock-pass").focus(), 0);
+      return;
+    }
     if (page === "job" && arg) { $("#view-job").hidden = false; nav("jobs"); showJob(decodeURIComponent(arg)); }
     else if (page === "jobs") { $("#view-jobs").hidden = false; nav("jobs"); showJobs(); }
     else if (page === "help") { $("#view-help").hidden = false; nav("help"); }
@@ -810,7 +913,8 @@
   document.title = CFG.title;
   $("#brand-species").textContent = CFG.species;
   initForm();
+  initUnlock();
   window.addEventListener("hashchange", route);
-  route();
-  loadInfo().then(() => updateQueryStatus());
+  // Info first: it tells us whether this is a private (passphrase) server.
+  loadInfo().finally(() => { route(); updateQueryStatus(); });
 })();

@@ -25,6 +25,8 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 180
+    env:
+      PRIVATE: ${{ secrets.LAB_KEY != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -35,29 +37,37 @@ jobs:
           github-token: ${{ github.token }}
           genome-url: ${{ secrets.GENOME_URL }}
           gff-url: ${{ secrets.GFF_URL }}
+          data-repo: ${{ vars.DATA_REPO }}
+          data-token: ${{ secrets.DATA_TOKEN }}
+          lab-key: ${{ secrets.LAB_KEY }}
           db-version: ${{ vars.DB_VERSION || '1' }}
           species: ${{ vars.SPECIES || 'Hydroides elegans' }}
           assembly: ${{ vars.ASSEMBLY || '' }}
 
       - name: Smoke test
+        if: env.PRIVATE != 'true'
         run: |
-          set -x
           for db in genome transcripts proteins; do
-            [ -e "blastdb/$db.pin" ] || [ -e "blastdb/$db.nin" ] || [ -e "blastdb/$db.00.nin" ] || { echo "no $db db"; continue; }
+            ls blastdb/$db.* >/dev/null 2>&1 || { echo "no $db db"; continue; }
             blastdbcmd -db "blastdb/$db" -info | head -8
           done
 
       - name: Publish database info for the website
         env:
           GH_TOKEN: ${{ github.token }}
+          LAB_KEY: ${{ secrets.LAB_KEY }}
         run: |
           mkdir -p publish
-          cp blastdb/info.json publish/info.json
+          bash scripts/publish_info.sh blastdb/info.json publish
           bash scripts/publish.sh publish "Update database info"
 
       - name: Summary
         run: |
           echo "### BLAST databases ready" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$PRIVATE" = true ]; then
+            echo "Private mode: details are only visible on the website with the lab passphrase." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           echo '```json' >> "$GITHUB_STEP_SUMMARY"
-          python3 -c "import json;d=json.load(open('blastdb/info.json'));d.pop('examples',None);print(json.dumps(d,indent=1))" >> "$GITHUB_STEP_SUMMARY"
+          /usr/bin/python3 -c "import json;d=json.load(open('blastdb/info.json'));d.pop('examples',None);print(json.dumps(d,indent=1))" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"

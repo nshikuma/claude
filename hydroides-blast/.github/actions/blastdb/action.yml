@@ -4,10 +4,15 @@ description: >
   them from the Actions cache or building them from the genome + GFF.
   The cache key changes automatically when the genome files, the build script
   or the DB_VERSION variable change, so replacing the genome triggers a rebuild.
+  With a lab key (private mode) the cached copy is encrypted and build output
+  is kept out of the (public) log.
 
 inputs:
   genome-url: { description: GENOME_URL secret, default: '' }
   gff-url: { description: GFF_URL secret, default: '' }
+  data-repo: { description: 'private repository holding the genome release (DATA_REPO variable), e.g. mylab/hydroides-genome-data', default: '' }
+  data-token: { description: DATA_TOKEN secret, a token that can read data-repo, default: '' }
+  lab-key: { description: LAB_KEY secret; turns on private mode, default: '' }
   db-version: { description: bump to force a rebuild, default: '1' }
   species: { description: shown on the website, default: 'Hydroides elegans' }
   assembly: { description: assembly name/version shown on the website, default: '' }
@@ -26,49 +31,63 @@ runs:
       shell: bash
       run: |
         sudo apt-get update -qq
-        sudo apt-get install -y -qq ncbi-blast+ gffread > /dev/null
+        sudo apt-get install -y -qq ncbi-blast+ gffread python3-cryptography > /dev/null
         blastn -version | head -1
 
     - name: Work out the cache key
       id: key
       shell: bash
       env:
-        GH_TOKEN: ${{ inputs.github-token }}
-        GH_REPO: ${{ github.repository }}
+        GH_TOKEN: ${{ inputs.data-token || inputs.github-token }}
+        DATA_REPO: ${{ inputs.data-repo || github.repository }}
         GENOME_URL: ${{ inputs.genome-url }}
         GFF_URL: ${{ inputs.gff-url }}
         TAG: ${{ inputs.release-tag }}
         DB_VERSION: ${{ inputs.db-version }}
         ASSEMBLY: ${{ inputs.assembly }}
+        PRIVATE: ${{ inputs.lab-key != '' }}
       run: |
         if [ -n "$GENOME_URL" ]; then
           source="url:$GENOME_URL|$GFF_URL"
         else
-          source="release:$(gh release view "$TAG" --json assets \
+          source="release:$(gh release view "$TAG" --repo "$DATA_REPO" --json assets \
             --jq '[.assets[] | .name + ":" + (.size|tostring) + ":" + .updatedAt] | join(",")' 2>/dev/null || echo missing)"
         fi
         if [ "$source" = "release:missing" ]; then
-          echo "::error::No genome data yet. Create a release tagged '$TAG' with the genome FASTA and GFF attached (see README)."
+          echo "::error::No genome data found: no release tagged '$TAG' in the data repository (or DATA_TOKEN can't read it). See the README."
           exit 1
         fi
-        # Only hashes go into the key, so private URLs never appear in logs.
-        hash=$(printf '%s|%s|%s|%s' "$source" "$DB_VERSION" "$ASSEMBLY" \
+        # Only a hash goes into the key, so private URLs never appear in logs.
+        hash=$(printf '%s|%s|%s|%s|%s' "$source" "$DB_VERSION" "$ASSEMBLY" "$PRIVATE" \
                "$(cat "$GITHUB_WORKSPACE/scripts/build_db.py")" | sha256sum | cut -c1-16)
         echo "key=blastdb-$hash" >> "$GITHUB_OUTPUT"
+        if [ "$PRIVATE" = true ]; then echo "path=blastdb.tar.enc" >> "$GITHUB_OUTPUT"; else echo "path=blastdb" >> "$GITHUB_OUTPUT"; fi
 
     - name: Restore databases from cache
       id: restore
       uses: actions/cache/restore@v4
       with:
-        path: blastdb
+        path: ${{ steps.key.outputs.path }}
         key: ${{ steps.key.outputs.key }}
+
+    - name: Decrypt cached databases
+      if: steps.restore.outputs.cache-hit == 'true' && inputs.lab-key != ''
+      shell: bash
+      env:
+        LAB_KEY: ${{ inputs.lab-key }}
+      run: |
+        if ! openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass env:LAB_KEY -in blastdb.tar.enc | tar -x; then
+          echo "::error::Could not decrypt the cached databases. If you changed LAB_KEY, also change the DB_VERSION variable (e.g. 1 -> 2) so they are rebuilt."
+          exit 1
+        fi
+        rm blastdb.tar.enc
 
     - name: Download genome and annotation
       if: steps.restore.outputs.cache-hit != 'true'
       shell: bash
       env:
-        GH_TOKEN: ${{ inputs.github-token }}
-        GH_REPO: ${{ github.repository }}
+        GH_TOKEN: ${{ inputs.data-token || inputs.github-token }}
+        DATA_REPO: ${{ inputs.data-repo || github.repository }}
         GENOME_URL: ${{ inputs.genome-url }}
         GFF_URL: ${{ inputs.gff-url }}
         RELEASE_TAG: ${{ inputs.release-tag }}
@@ -80,16 +99,39 @@ runs:
       env:
         SPECIES: ${{ inputs.species }}
         ASSEMBLY: ${{ inputs.assembly }}
+        PRIVATE: ${{ inputs.lab-key != '' }}
       run: |
         gff_args=()
         [ -s input/annotation ] && gff_args=(--gff input/annotation)
-        python3 "$GITHUB_WORKSPACE/scripts/build_db.py" --genome input/genome "${gff_args[@]}" \
-          --out blastdb --species "$SPECIES" --assembly "$ASSEMBLY"
-        rm -rf input
+        cmd=(/usr/bin/python3 "$GITHUB_WORKSPACE/scripts/build_db.py" --genome input/genome "${gff_args[@]}"
+             --out blastdb --species "$SPECIES" --assembly "$ASSEMBLY")
+        if [ "$PRIVATE" = true ]; then
+          # The log of a public repository is public: don't print scaffold or gene names.
+          if ! "${cmd[@]}" > build.log 2>&1; then
+            echo "::error::Building the databases failed:"; grep -iE "error|exit|not found|duplicate" build.log | tail -5 | cut -c1-200
+            exit 1
+          fi
+          echo "Databases built (details hidden in private mode)."
+        else
+          "${cmd[@]}"
+        fi
+        rm -rf input build.log
+
+    - name: Encrypt databases for the cache
+      if: steps.restore.outputs.cache-hit != 'true' && inputs.lab-key != ''
+      shell: bash
+      env:
+        LAB_KEY: ${{ inputs.lab-key }}
+      run: tar -c blastdb | openssl enc -e -aes-256-cbc -pbkdf2 -iter 200000 -pass env:LAB_KEY -out blastdb.tar.enc
 
     - name: Save databases to cache
       if: steps.restore.outputs.cache-hit != 'true'
       uses: actions/cache/save@v4
       with:
-        path: blastdb
+        path: ${{ steps.key.outputs.path }}
         key: ${{ steps.key.outputs.key }}
+
+    - name: Tidy up
+      if: inputs.lab-key != ''
+      shell: bash
+      run: rm -f blastdb.tar.enc
