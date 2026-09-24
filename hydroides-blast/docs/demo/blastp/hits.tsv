@@ -1,0 +1,2 @@
+query	subject	gene	pct_identity	align_len	mismatches	gaps	q_start	q_end	s_start	s_end	evalue	bitscore	query_cover_pct
+histone_H3 Histone H3.3, human	HELE_000101-RA	H3 — histone H3	100.00	136	0	0	1	136	1	136	1.94e-101	274.6	100.0

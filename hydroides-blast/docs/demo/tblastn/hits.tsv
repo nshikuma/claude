@@ -1,0 +1,8 @@
+query	subject	gene	pct_identity	align_len	mismatches	gaps	q_start	q_end	s_start	s_end	evalue	bitscore	query_cover_pct
+histone_H3 Histone H3.3, human	scaffold_1	intergenic; nearest H3 (29.1 kb)	94.07	135	8	0	1	135	40001	40405	6.43e-82	254.6	100.0
+histone_H3 Histone H3.3, human	scaffold_1	H3 (histone H3)	100.00	68	0	0	69	136	10577	10780	3.07e-42	141.4	100.0
+histone_H3 Histone H3.3, human	scaffold_1	H3 (histone H3)	100.00	68	0	0	1	68	10061	10264	3.07e-40	135.6	100.0
+histone_H3 Histone H3.3, human	scaffold_2	intergenic; nearest UBB (14.3 kb)	71.32	136	39	0	1	136	30001	30408	1.18e-51	168.3	100.0
+histone_H3 Histone H3.3, human	scaffold_3	intergenic; nearest HELE_000303 (8.9 kb)	58.65	133	55	0	1	133	15001	15399	1.94e-40	136.0	97.8
+ubiquitin Ubiquitin, human	scaffold_2	UBB (polyubiquitin-B)	81.13	53	8	2	1	51	15475	15633	6.61e-22	80.1	100.0
+ubiquitin Ubiquitin, human	scaffold_2	UBB (polyubiquitin-B)	100.00	38	0	0	39	76	15094	15207	1.41e-21	79.3	100.0

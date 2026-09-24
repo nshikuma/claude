@@ -1,0 +1,175 @@
+TBLASTN 2.12.0+
+
+
+Reference: Stephen F. Altschul, Thomas L. Madden, Alejandro A.
+Schaffer, Jinghui Zhang, Zheng Zhang, Webb Miller, and David J.
+Lipman (1997), "Gapped BLAST and PSI-BLAST: a new generation of
+protein database search programs", Nucleic Acids Res. 25:3389-3402.
+
+
+
+Database: Hydroides elegans genome
+           3 sequences; 125,000 total letters
+
+
+
+Query= histone_H3 Histone H3.3, human
+
+Length=136
+                                                                      Score     E
+Sequences producing significant alignments:                          (Bits)  Value
+
+scaffold_1                                                            254     6e-82
+scaffold_2                                                            168     1e-51
+scaffold_3                                                            135     2e-40
+
+
+>scaffold_1 
+Length=60000
+
+ Score = 254 bits (649),  Expect = 6e-82, Method: Compositional matrix adjust.
+ Identities = 127/135 (94%), Positives = 129/135 (96%), Gaps = 0/135 (0%)
+ Frame = +2
+
+Query  1      MARTKQTARKSTGGKAPRKQLATKAARKSAPATGGVKKPHRYRPGTVALREIRRYQKSTE  60
+              MART+QTARKSTGGKAPRKQLATKAARKSAPATGGVKKPHRYRPGTVALREIR+YQKSTE
+Sbjct  40001  MARTEQTARKSTGGKAPRKQLATKAARKSAPATGGVKKPHRYRPGTVALREIRQYQKSTE  40180
+
+Query  61     LLIRKLPFQRLVREIAQDFKTDLRFQSSAVMALQEASEAYLVGLFEDTNLCAIHAKRVTI  120
+              LLIRKLPF RLVREIAQDFKTDLRFQSSAVMA QEASEA L GLFED NLCAIHAKRVTI
+Sbjct  40181  LLIRKLPFHRLVREIAQDFKTDLRFQSSAVMAEQEASEASLTGLFEDQNLCAIHAKRVTI  40360
+
+Query  121    MPKDIQLARRIRGER  135
+              MPKDIQLARRI GER
+Sbjct  40361  MPKDIQLARRIPGER  40405
+
+
+ Score = 141 bits (355),  Expect = 3e-42, Method: Compositional matrix adjust.
+ Identities = 68/68 (100%), Positives = 68/68 (100%), Gaps = 0/68 (0%)
+ Frame = +2
+
+Query  69     QRLVREIAQDFKTDLRFQSSAVMALQEASEAYLVGLFEDTNLCAIHAKRVTIMPKDIQLA  128
+              QRLVREIAQDFKTDLRFQSSAVMALQEASEAYLVGLFEDTNLCAIHAKRVTIMPKDIQLA
+Sbjct  10577  QRLVREIAQDFKTDLRFQSSAVMALQEASEAYLVGLFEDTNLCAIHAKRVTIMPKDIQLA  10756
+
+Query  129    RRIRGERA  136
+              RRIRGERA
+Sbjct  10757  RRIRGERA  10780
+
+
+ Score = 135 bits (340),  Expect = 3e-40, Method: Compositional matrix adjust.
+ Identities = 68/68 (100%), Positives = 68/68 (100%), Gaps = 0/68 (0%)
+ Frame = +2
+
+Query  1      MARTKQTARKSTGGKAPRKQLATKAARKSAPATGGVKKPHRYRPGTVALREIRRYQKSTE  60
+              MARTKQTARKSTGGKAPRKQLATKAARKSAPATGGVKKPHRYRPGTVALREIRRYQKSTE
+Sbjct  10061  MARTKQTARKSTGGKAPRKQLATKAARKSAPATGGVKKPHRYRPGTVALREIRRYQKSTE  10240
+
+Query  61     LLIRKLPF  68
+              LLIRKLPF
+Sbjct  10241  LLIRKLPF  10264
+
+
+>scaffold_2 
+Length=40000
+
+ Score = 168 bits (425),  Expect = 1e-51, Method: Compositional matrix adjust.
+ Identities = 97/136 (71%), Positives = 98/136 (72%), Gaps = 0/136 (0%)
+ Frame = +1
+
+Query  1      MARTKQTARKSTGGKAPRKQLATKAARKSAPATGGVKKPHRYRPGTVALREIRRYQKSTE  60
+              MART  TARKST G  PRK+ AT AARK A ATGGVKK HRYR  TVAL  I R  K TE
+Sbjct  30001  MARTMCTARKSTYGVPPRKRYATSAARKDAYATGGVKKQHRYRDQTVALIMIGREYKMTE  30180
+
+Query  61     LLIRKLPFQRLVREIAQDFKTDLRFQSSAVMALQEASEAYLVGLFEDTNLCAIHAKRVTI  120
+              LLIR  PF RLV EI Q  KT LRF  S VMAL E  EAYLVGLFED NLCAI AK VTI
+Sbjct  30181  LLIRIHPFMRLVYEIEQTKKTCLRFYISPVMALWEPYEAYLVGLFEDENLCAIPAKGVTI  30360
+
+Query  121    MPKDIQLARRIRGERA  136
+              M KD QLARRIRGE A
+Sbjct  30361  MNKDRQLARRIRGEHA  30408
+
+
+>scaffold_3 
+Length=25000
+
+ Score = 135 bits (341),  Expect = 2e-40, Method: Compositional matrix adjust.
+ Identities = 78/133 (59%), Positives = 83/133 (62%), Gaps = 0/133 (0%)
+ Frame = +1
+
+Query  1      MARTKQTARKSTGGKAPRKQLATKAARKSAPATGGVKKPHRYRPGTVALREIRRYQKSTE  60
+              MARTK  A   TGGK  + Q       K+APA GGVKKPH YRPGT  L E R   K  E
+Sbjct  15001  MARTKIPANAETGGKQRKVQDWQADWNKAAPAEGGVKKPHVYRPGTHMLMERRPVHKVME  15180
+
+Query  61     LLIRKLPFQRLVREIAQDFKTDLRFQSSAVMALQEASEAYLVGLFEDTNLCAIHAKRVTI  120
+              +LI  LPFQR VRE A+DFKT LRF      ALQ  SE YLVG  E TN  AI AKRV  
+Sbjct  15181  ILIAGLPFQRSVRERAKDFKTFLRFAWGEHWALQFVSELYLVGCIEATNPYAIFAKRVMD  15360
+
+Query  121    MPKDIQLARRIRG  133
+              MPKD+Q  RRIRG
+Sbjct  15361  MPKDMQYFRRIRG  15399
+
+
+
+Lambda      K        H
+   0.321    0.131    0.361 
+
+Gapped
+Lambda      K        H
+   0.267   0.0410    0.140 
+
+Effective search space used: 3403328
+
+
+Query= ubiquitin Ubiquitin, human
+
+Length=76
+                                                                      Score     E
+Sequences producing significant alignments:                          (Bits)  Value
+
+scaffold_2                                                            80.1    7e-22
+
+
+>scaffold_2 
+Length=40000
+
+ Score = 80.1 bits (196),  Expect = 7e-22, Method: Compositional matrix adjust.
+ Identities = 43/53 (81%), Positives = 44/53 (83%), Gaps = 2/53 (4%)
+ Frame = -2
+
+Query  1      MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFA--GKQLE  51
+              MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPP    L F   G+Q E
+Sbjct  15633  MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPVSIYLSFHKRGQQWE  15475
+
+
+ Score = 79.3 bits (194),  Expect = 1e-21, Method: Compositional matrix adjust.
+ Identities = 38/38 (100%), Positives = 38/38 (100%), Gaps = 0/38 (0%)
+ Frame = -2
+
+Query  39     DQQRLIFAGKQLEDGRTLSDYNIQKESTLHLVLRLRGG  76
+              DQQRLIFAGKQLEDGRTLSDYNIQKESTLHLVLRLRGG
+Sbjct  15207  DQQRLIFAGKQLEDGRTLSDYNIQKESTLHLVLRLRGG  15094
+
+
+
+Lambda      K        H
+   0.321    0.131    0.361 
+
+Gapped
+Lambda      K        H
+   0.267   0.0410    0.140 
+
+Effective search space used: 3403328
+
+
+  Database: Hydroides elegans genome
+    Posted date:  Sep 24, 2026  12:30 AM
+  Number of letters in database: 125,000
+  Number of sequences in database:  3
+
+
+
+Matrix: BLOSUM62
+Gap Penalties: Existence: 11, Extension: 1
+Neighboring words threshold: 13
+Window for multiple hits: 40

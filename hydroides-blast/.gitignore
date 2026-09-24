@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+/blastdb/
+/input/
+/out/
+/publish/
+/test_data/

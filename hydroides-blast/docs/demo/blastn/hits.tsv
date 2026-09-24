@@ -1,0 +1,4 @@
+query	subject	gene	pct_identity	align_len	mismatches	gaps	q_start	q_end	s_start	s_end	evalue	bitscore	query_cover_pct
+H3_mRNA	scaffold_1	H3 (histone H3)	100.00	297	0	0	265	561	10577	10873	1.63e-154	536.9	100.0
+H3_mRNA	scaffold_1	H3 (histone H3)	100.00	264	0	0	1	264	10001	10264	1.34e-136	477.4	100.0
+H3_mRNA	scaffold_1	intergenic; nearest H3 (29.1 kb)	79.37	412	85	0	60	471	40000	40411	2.59e-101	361.1	100.0

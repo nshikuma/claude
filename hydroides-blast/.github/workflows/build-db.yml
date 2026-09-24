@@ -1,0 +1,63 @@
+name: Build BLAST databases
+
+# Run this once after uploading the genome (Actions tab -> "Build BLAST
+# databases" -> Run workflow). It builds the databases, caches them for the
+# search workflow, and publishes the genome stats the website shows.
+#
+# The weekly run keeps the cache warm: GitHub deletes caches that go unused
+# for 7 days, and a rebuild would otherwise make the next search slow.
+# If the cache is ever missing, a search rebuilds it automatically.
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published, edited]
+  schedule:
+    - cron: '17 6 * * 1'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-blastdb
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get BLAST databases
+        id: db
+        uses: ./.github/actions/blastdb
+        with:
+          github-token: ${{ github.token }}
+          genome-url: ${{ secrets.GENOME_URL }}
+          gff-url: ${{ secrets.GFF_URL }}
+          db-version: ${{ vars.DB_VERSION || '1' }}
+          species: ${{ vars.SPECIES || 'Hydroides elegans' }}
+          assembly: ${{ vars.ASSEMBLY || '' }}
+
+      - name: Smoke test
+        run: |
+          set -x
+          for db in genome transcripts proteins; do
+            [ -e "blastdb/$db.pin" ] || [ -e "blastdb/$db.nin" ] || [ -e "blastdb/$db.00.nin" ] || { echo "no $db db"; continue; }
+            blastdbcmd -db "blastdb/$db" -info | head -8
+          done
+
+      - name: Publish database info for the website
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p publish
+          cp blastdb/info.json publish/info.json
+          bash scripts/publish.sh publish "Update database info"
+
+      - name: Summary
+        run: |
+          echo "### BLAST databases ready" >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          python3 -c "import json;d=json.load(open('blastdb/info.json'));d.pop('examples',None);print(json.dumps(d,indent=1))" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"

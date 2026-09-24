@@ -1,0 +1,19 @@
+name: Tests
+
+on:
+  push:
+    paths: ['scripts/**', 'tests/**', 'docs/app.js', '.github/workflows/test.yml']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ncbi-blast+ gffread > /dev/null
+      - run: python3 tests/test_pipeline.py
+      - run: node --check docs/app.js

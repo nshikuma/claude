@@ -1,0 +1,131 @@
+BLASTN 2.12.0+
+
+
+Reference: Stephen F. Altschul, Thomas L. Madden, Alejandro A.
+Schaffer, Jinghui Zhang, Zheng Zhang, Webb Miller, and David J.
+Lipman (1997), "Gapped BLAST and PSI-BLAST: a new generation of
+protein database search programs", Nucleic Acids Res. 25:3389-3402.
+
+
+
+Database: Hydroides elegans genome
+           3 sequences; 125,000 total letters
+
+
+
+Query= H3_mRNA
+
+Length=561
+                                                                      Score     E
+Sequences producing significant alignments:                          (Bits)  Value
+
+scaffold_1                                                            536     2e-154
+
+
+>scaffold_1 
+Length=60000
+
+ Score = 536 bits (594),  Expect = 2e-154
+ Identities = 297/297 (100%), Gaps = 0/297 (0%)
+ Strand=Plus/Plus
+
+Query  265    CAGCGCCTGGTGAGAGAGATTGCTCAAGACTTCAAAACAGACTTGCGCTTCCAAAGCAGC  324
+              ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  10577  CAGCGCCTGGTGAGAGAGATTGCTCAAGACTTCAAAACAGACTTGCGCTTCCAAAGCAGC  10636
+
+Query  325    GCCGTGATGGCTTTGCAGGAGGCCTCAGAAGCTTACTTGGTAGGCTTGTTCGAAGACACC  384
+              ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  10637  GCCGTGATGGCTTTGCAGGAGGCCTCAGAAGCTTACTTGGTAGGCTTGTTCGAAGACACC  10696
+
+Query  385    AACCTGTGCGCCATCCACGCTAAGCGCGTGACAATCATGCCCAAAGACATCCAATTGGCC  444
+              ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  10697  AACCTGTGCGCCATCCACGCTAAGCGCGTGACAATCATGCCCAAAGACATCCAATTGGCC  10756
+
+Query  445    AGACGCATCCGCGGCGAACGCGCCTAATACCTGACAGCTTGTTGGGGTTAAAGGACCGTA  504
+              ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  10757  AGACGCATCCGCGGCGAACGCGCCTAATACCTGACAGCTTGTTGGGGTTAAAGGACCGTA  10816
+
+Query  505    TTGGATACCAAAGCTTGTACGACGCTTTTGCCGTAGCTAGTAGTCCCCGAGTAGTGA  561
+              |||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  10817  TTGGATACCAAAGCTTGTACGACGCTTTTGCCGTAGCTAGTAGTCCCCGAGTAGTGA  10873
+
+
+ Score = 477 bits (528),  Expect = 1e-136
+ Identities = 264/264 (100%), Gaps = 0/264 (0%)
+ Strand=Plus/Plus
+
+Query  1      CGCATCTCCGATATATCCACCTCGCATAGCGATAAATTCACGGCGAGAAGATTTATCGCC  60
+              ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  10001  CGCATCTCCGATATATCCACCTCGCATAGCGATAAATTCACGGCGAGAAGATTTATCGCC  10060
+
+Query  61     ATGGCCCGCACCAAGCAGACAGCCCGCAAGTCAACAGGAGGCAAGGCCCCCCGCAAGCAG  120
+              ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  10061  ATGGCCCGCACCAAGCAGACAGCCCGCAAGTCAACAGGAGGCAAGGCCCCCCGCAAGCAG  10120
+
+Query  121    CTGGCCACCAAGGCCGCCAGAAAAAGCGCCCCAGCTACCGGAGGAGTGAAGAAGCCCCAC  180
+              ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  10121  CTGGCCACCAAGGCCGCCAGAAAAAGCGCCCCAGCTACCGGAGGAGTGAAGAAGCCCCAC  10180
+
+Query  181    CGCTACAGACCAGGCACCGTGGCCTTGAGAGAAATCAGACGCTACCAAAAGAGCACCGAA  240
+              ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Sbjct  10181  CGCTACAGACCAGGCACCGTGGCCTTGAGAGAAATCAGACGCTACCAAAAGAGCACCGAA  10240
+
+Query  241    CTGTTGATCCGCAAGTTGCCATTC  264
+              ||||||||||||||||||||||||
+Sbjct  10241  CTGTTGATCCGCAAGTTGCCATTC  10264
+
+
+ Score = 361 bits (399),  Expect = 3e-101
+ Identities = 327/412 (79%), Gaps = 0/412 (0%)
+ Strand=Plus/Plus
+
+Query  60     CATGGCCCGCACCAAGCAGACAGCCCGCAAGTCAACAGGAGGCAAGGCCCCCCGCAAGCA  119
+              ||||||||||||| |||| || ||||||||    || || ||||| ||||||||||||||
+Sbjct  40000  CATGGCCCGCACCGAGCAAACCGCCCGCAAAAGCACCGGCGGCAAAGCCCCCCGCAAGCA  40059
+
+Query  120    GCTGGCCACCAAGGCCGCCAGAAAAAGCGCCCCAGCTACCGGAGGAGTGAAGAAGCCCCA  179
+              | |||||||||| |||||| | || |||||||| || ||||| || ||||||||||| ||
+Sbjct  40060  GTTGGCCACCAAAGCCGCCCGCAAGAGCGCCCCCGCCACCGGCGGCGTGAAGAAGCCACA  40119
+
+Query  180    CCGCTACAGACCAGGCACCGTGGCCTTGAGAGAAATCAGACGCTACCAAAAGAGCACCGA  239
+              | | ||| | || ||||| || ||  || | |||||| | |  ||||| || ||||||||
+Sbjct  40120  CAGATACCGCCCCGGCACAGTAGCTCTGCGCGAAATCCGCCAGTACCAGAAAAGCACCGA  40179
+
+Query  240    ACTGTTGATCCGCAAGTTGCCATTCCAGCGCCTGGTGAGAGAGATTGCTCAAGACTTCAA  299
+               |||||||| ||||| ||||| |||||  |  |||| |||||||| ||||| ||||||||
+Sbjct  40180  GCTGTTGATTCGCAAATTGCCCTTCCACAGATTGGTAAGAGAGATCGCTCAGGACTTCAA  40239
+
+Query  300    AACAGACTTGCGCTTCCAAAGCAGCGCCGTGATGGCTTTGCAGGAGGCCTCAGAAGCTTA  359
+              ||| |||||||||||||| |||   || |||||||||  ||| || ||    || ||   
+Sbjct  40240  AACCGACTTGCGCTTCCAGAGCTCAGCTGTGATGGCTGAGCAAGAAGCTAGCGAGGCCAG  40299
+
+Query  360    CTTGGTAGGCTTGTTCGAAGACACCAACCTGTGCGCCATCCACGCTAAGCGCGTGACAAT  419
+              | ||  |||| ||||||| |||   ||||||||||||||||||||||| ||||| |||||
+Sbjct  40300  CCTGACAGGCCTGTTCGAGGACCAGAACCTGTGCGCCATCCACGCTAAACGCGTAACAAT  40359
+
+Query  420    CATGCCCAAAGACATCCAATTGGCCAGACGCATCCGCGGCGAACGCGCCTAA  471
+              |||||| || |||||||| ||||||||| | |||| |||||| |||  ||||
+Sbjct  40360  CATGCCAAAGGACATCCAGTTGGCCAGAAGAATCCCCGGCGAGCGCTACTAA  40411
+
+
+
+Lambda      K        H
+   0.634    0.408    0.912 
+
+Gapped
+Lambda      K        H
+   0.625    0.410    0.780 
+
+Effective search space used: 67719106
+
+
+  Database: Hydroides elegans genome
+    Posted date:  Sep 24, 2026  12:30 AM
+  Number of letters in database: 125,000
+  Number of sequences in database:  3
+
+
+
+Matrix: blastn matrix 2 -3
+Gap Penalties: Existence: 5, Extension: 2
+Window for multiple hits: 40

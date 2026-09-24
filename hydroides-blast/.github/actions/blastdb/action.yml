@@ -1,0 +1,95 @@
+name: BLAST databases
+description: >
+  Install BLAST+ and make the BLAST databases available in ./blastdb, restoring
+  them from the Actions cache or building them from the genome + GFF.
+  The cache key changes automatically when the genome files, the build script
+  or the DB_VERSION variable change, so replacing the genome triggers a rebuild.
+
+inputs:
+  genome-url: { description: GENOME_URL secret, default: '' }
+  gff-url: { description: GFF_URL secret, default: '' }
+  db-version: { description: bump to force a rebuild, default: '1' }
+  species: { description: shown on the website, default: 'Hydroides elegans' }
+  assembly: { description: assembly name/version shown on the website, default: '' }
+  release-tag: { description: release holding the genome files, default: 'genome-data' }
+  github-token: { required: true }
+
+outputs:
+  built:
+    description: "'true' if the databases were (re)built in this run"
+    value: ${{ steps.restore.outputs.cache-hit != 'true' }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install BLAST+ and gffread
+      shell: bash
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq ncbi-blast+ gffread > /dev/null
+        blastn -version | head -1
+
+    - name: Work out the cache key
+      id: key
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        GH_REPO: ${{ github.repository }}
+        GENOME_URL: ${{ inputs.genome-url }}
+        GFF_URL: ${{ inputs.gff-url }}
+        TAG: ${{ inputs.release-tag }}
+        DB_VERSION: ${{ inputs.db-version }}
+        ASSEMBLY: ${{ inputs.assembly }}
+      run: |
+        if [ -n "$GENOME_URL" ]; then
+          source="url:$GENOME_URL|$GFF_URL"
+        else
+          source="release:$(gh release view "$TAG" --json assets \
+            --jq '[.assets[] | .name + ":" + (.size|tostring) + ":" + .updatedAt] | join(",")' 2>/dev/null || echo missing)"
+        fi
+        if [ "$source" = "release:missing" ]; then
+          echo "::error::No genome data yet. Create a release tagged '$TAG' with the genome FASTA and GFF attached (see README)."
+          exit 1
+        fi
+        # Only hashes go into the key, so private URLs never appear in logs.
+        hash=$(printf '%s|%s|%s|%s' "$source" "$DB_VERSION" "$ASSEMBLY" \
+               "$(cat "$GITHUB_WORKSPACE/scripts/build_db.py")" | sha256sum | cut -c1-16)
+        echo "key=blastdb-$hash" >> "$GITHUB_OUTPUT"
+
+    - name: Restore databases from cache
+      id: restore
+      uses: actions/cache/restore@v4
+      with:
+        path: blastdb
+        key: ${{ steps.key.outputs.key }}
+
+    - name: Download genome and annotation
+      if: steps.restore.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        GH_REPO: ${{ github.repository }}
+        GENOME_URL: ${{ inputs.genome-url }}
+        GFF_URL: ${{ inputs.gff-url }}
+        RELEASE_TAG: ${{ inputs.release-tag }}
+      run: bash "$GITHUB_WORKSPACE/scripts/fetch_data.sh"
+
+    - name: Build databases
+      if: steps.restore.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        SPECIES: ${{ inputs.species }}
+        ASSEMBLY: ${{ inputs.assembly }}
+      run: |
+        gff_args=()
+        [ -s input/annotation ] && gff_args=(--gff input/annotation)
+        python3 "$GITHUB_WORKSPACE/scripts/build_db.py" --genome input/genome "${gff_args[@]}" \
+          --out blastdb --species "$SPECIES" --assembly "$ASSEMBLY"
+        rm -rf input
+
+    - name: Save databases to cache
+      if: steps.restore.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: blastdb
+        key: ${{ steps.key.outputs.key }}

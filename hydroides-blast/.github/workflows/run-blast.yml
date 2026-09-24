@@ -1,0 +1,123 @@
+name: Run BLAST
+
+# Every search is a GitHub issue whose title starts with "BLAST". The website
+# opens a pre-filled issue; this workflow runs the search with NCBI BLAST+,
+# publishes the results to the blast-results branch (which the website reads),
+# comments a summary on the issue and closes it.
+#
+# Security: the issue text is only ever passed to Python through environment
+# variables and is never pasted into a shell command.
+
+on:
+  issues:
+    types: [opened, reopened]
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: blast-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  blast:
+    if: startsWith(github.event.issue.title, 'BLAST')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      NUMBER: ${{ github.event.issue.number }}
+    steps:
+      - name: Check the author is allowed to run searches
+        id: auth
+        env:
+          ALLOWED_USERS: ${{ vars.ALLOWED_USERS }}
+          AUTHOR: ${{ github.event.issue.user.login }}
+          ASSOCIATION: ${{ github.event.issue.author_association }}
+        run: |
+          # ALLOWED_USERS (repository variable):
+          #   empty           -> anyone with a GitHub account may search
+          #   "collaborators" -> only people with access to this repository
+          #   "alice,bob"     -> only these GitHub usernames
+          allowed=yes
+          list=$(echo "${ALLOWED_USERS}" | tr '[:upper:]' '[:lower:]' | tr -d ' ')
+          author=$(echo "$AUTHOR" | tr '[:upper:]' '[:lower:]')
+          if [ "$list" = "collaborators" ]; then
+            case "$ASSOCIATION" in OWNER|MEMBER|COLLABORATOR) ;; *) allowed=no ;; esac
+          elif [ -n "$list" ]; then
+            case ",$list," in *",$author,"*) ;; *) allowed=no ;; esac
+          fi
+          if [ "$allowed" = no ]; then
+            gh issue comment "$NUMBER" --body "Sorry, this BLAST server only runs searches for members of the lab. Ask the site owner to add your GitHub username."
+            gh issue close "$NUMBER" --reason "not planned"
+          fi
+          echo "ok=$allowed" >> "$GITHUB_OUTPUT"
+
+      - name: Mark as running
+        if: steps.auth.outputs.ok == 'yes'
+        run: |
+          gh label create "blast: running" --color FBCA04 --description "BLAST search in progress" 2>/dev/null || true
+          gh label create "blast: done" --color 0E8A16 --description "BLAST search finished" 2>/dev/null || true
+          gh label create "blast: failed" --color D93F0B --description "BLAST search could not run" 2>/dev/null || true
+          gh issue edit "$NUMBER" --add-label "blast: running" --remove-label "blast: done,blast: failed" || \
+            gh issue edit "$NUMBER" --add-label "blast: running"
+
+      - uses: actions/checkout@v4
+        if: steps.auth.outputs.ok == 'yes'
+
+      - name: Get BLAST databases
+        if: steps.auth.outputs.ok == 'yes'
+        uses: ./.github/actions/blastdb
+        with:
+          github-token: ${{ github.token }}
+          genome-url: ${{ secrets.GENOME_URL }}
+          gff-url: ${{ secrets.GFF_URL }}
+          db-version: ${{ vars.DB_VERSION || '1' }}
+          species: ${{ vars.SPECIES || 'Hydroides elegans' }}
+          assembly: ${{ vars.ASSEMBLY || '' }}
+
+      - name: Run BLAST
+        if: steps.auth.outputs.ok == 'yes'
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
+          ISSUE_CREATED: ${{ github.event.issue.created_at }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          DB_DIR: blastdb
+          OUT_DIR: out
+        run: |
+          if [ -z "$SITE_URL" ]; then
+            owner="${GITHUB_REPOSITORY%%/*}"; repo="${GITHUB_REPOSITORY#*/}"
+            export SITE_URL="https://${owner,,}.github.io/${repo}"
+          fi
+          python3 scripts/run_blast.py
+
+      - name: Publish results for the website
+        if: steps.auth.outputs.ok == 'yes'
+        run: |
+          mkdir -p publish
+          cp -R out/results publish/
+          cp blastdb/info.json publish/info.json
+          bash scripts/publish.sh publish "Results for search #$NUMBER"
+
+      - name: Report on the issue
+        if: steps.auth.outputs.ok == 'yes'
+        run: |
+          status=$(cat out/status)
+          gh issue comment "$NUMBER" --body-file out/comment.md
+          gh issue edit "$NUMBER" --remove-label "blast: running" --add-label "blast: $status"
+          if [ "$status" = done ]; then
+            gh issue close "$NUMBER" --reason completed
+          else
+            gh issue close "$NUMBER" --reason "not planned"
+          fi
+
+      - name: Report an unexpected failure
+        if: failure() && steps.auth.outputs.ok == 'yes'
+        run: |
+          gh issue comment "$NUMBER" --body "Something went wrong on the server while running this search. The site owner can see the details in the [workflow log]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID). You can retry by reopening this issue." || true
+          gh issue edit "$NUMBER" --remove-label "blast: running" --add-label "blast: failed" || true

@@ -1,0 +1,59 @@
+name: BLAST search
+description: Run a BLAST search against the genome (the website fills this in for you).
+title: "BLAST: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The easiest way to search is the website, which fills this form in for you.
+        You can also fill it in here. Results are posted as a comment in a few minutes.
+  - type: dropdown
+    id: program
+    attributes:
+      label: Program
+      options:
+        - blastn — nucleotide query vs nucleotide database
+        - blastp — protein query vs protein database
+        - blastx — translated nucleotide query vs protein database
+        - tblastn — protein query vs translated nucleotide database
+        - tblastx — translated nucleotide query vs translated nucleotide database
+    validations:
+      required: true
+  - type: dropdown
+    id: database
+    attributes:
+      label: Database
+      description: blastn, tblastn and tblastx search the genome or transcripts; blastp and blastx search proteins.
+      options:
+        - genome — whole genome assembly
+        - transcripts — spliced mRNAs from the annotation
+        - proteins — predicted proteins from the annotation
+    validations:
+      required: true
+  - type: textarea
+    id: query
+    attributes:
+      label: Query sequences
+      description: One or more sequences in FASTA format (a bare sequence is fine too).
+      render: fasta
+    validations:
+      required: true
+  - type: input
+    id: evalue
+    attributes:
+      label: E-value
+      placeholder: "0.001"
+  - type: input
+    id: maxhits
+    attributes:
+      label: Max hits
+      placeholder: "50"
+  - type: dropdown
+    id: task
+    attributes:
+      label: blastn task
+      description: Only used by blastn.
+      options:
+        - megablast — highly similar sequences (fastest)
+        - dc-megablast — more dissimilar sequences (cross-species)
+        - blastn — somewhat similar sequences (most sensitive)

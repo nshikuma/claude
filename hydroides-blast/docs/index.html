@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hydroides elegans BLAST</title>
+  <meta name="description" content="BLAST searches against the Hydroides elegans genome assembly, transcripts and proteins.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='15' fill='%230b7a75'/><path d='M9 22c3-10 11-10 14 0' stroke='white' stroke-width='3' fill='none' stroke-linecap='round'/></svg>">
+  <link rel="stylesheet" href="style.css">
+  <script src="config.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="#/">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15"/><path d="M9 22c3-10 11-10 14 0"/></svg>
+        <span><em id="brand-species">Hydroides elegans</em> BLAST</span>
+      </a>
+      <nav>
+        <a href="#/" data-nav="search">New search</a>
+        <a href="#/jobs" data-nav="jobs">Searches</a>
+        <a href="#/help" data-nav="help">Help</a>
+      </nav>
+    </div>
+  </header>
+
+  <div id="banner" class="wrap" hidden></div>
+
+  <main class="wrap">
+    <!-- ================= SEARCH ================= -->
+    <section id="view-search" class="view" hidden>
+      <form id="search-form" autocomplete="off" novalidate>
+        <div class="step">
+          <div class="step-head">
+            <span class="step-num">1</span>
+            <h2>Enter your query</h2>
+            <div class="step-tools">
+              <button type="button" class="link-btn" data-example="nucleotide">Example DNA</button>
+              <button type="button" class="link-btn" data-example="protein">Example protein</button>
+              <label class="link-btn file-btn">Upload FASTA<input type="file" id="file-input" accept=".fa,.fasta,.fna,.faa,.fas,.txt,.seq"></label>
+              <button type="button" class="link-btn" id="clear-btn">Clear</button>
+            </div>
+          </div>
+          <textarea id="query" spellcheck="false" rows="8"
+            placeholder="Paste one or more sequences in FASTA format, or just the sequence.&#10;&#10;>my_gene&#10;ATGGCTCGTACCAAGCAGACAGCTCGCAAGTCCACCGGTGGCAAGGCC..."></textarea>
+          <div id="query-status" class="query-status" aria-live="polite"></div>
+        </div>
+
+        <div class="step">
+          <div class="step-head"><span class="step-num">2</span><h2>Choose what to search</h2></div>
+          <div class="cards cards-3" id="db-cards" role="radiogroup" aria-label="Database"></div>
+        </div>
+
+        <div class="step">
+          <div class="step-head"><span class="step-num">3</span><h2>Choose a BLAST program</h2></div>
+          <div class="cards" id="program-cards" role="radiogroup" aria-label="Program"></div>
+          <div id="task-row" class="subopt" hidden>
+            <span class="subopt-label">Optimize for</span>
+            <div class="seg" id="task-seg" role="radiogroup" aria-label="blastn task">
+              <label><input type="radio" name="task" value="megablast" checked><span>Highly similar<small>megablast</small></span></label>
+              <label><input type="radio" name="task" value="dc-megablast"><span>More dissimilar<small>dc-megablast</small></span></label>
+              <label><input type="radio" name="task" value="blastn"><span>Somewhat similar<small>blastn</small></span></label>
+            </div>
+          </div>
+        </div>
+
+        <details class="advanced" id="advanced">
+          <summary>Advanced settings</summary>
+          <div class="adv-grid">
+            <label>E-value threshold
+              <select id="evalue">
+                <option>10</option><option>1</option><option>0.1</option><option>0.01</option>
+                <option selected>0.001</option><option>1e-5</option><option>1e-10</option><option>1e-20</option>
+              </select>
+              <small>Lower is stricter. Hits worse than this are hidden.</small>
+            </label>
+            <label>Max hits
+              <select id="maxhits"><option>10</option><option selected>50</option><option>100</option><option>250</option><option>500</option></select>
+              <small>Maximum number of sequences reported per query.</small>
+            </label>
+            <label id="matrix-label">Scoring matrix
+              <select id="matrix"><option>BLOSUM62</option><option>BLOSUM45</option><option>BLOSUM50</option><option>BLOSUM80</option><option>BLOSUM90</option><option>PAM30</option><option>PAM70</option><option>PAM250</option></select>
+              <small>BLOSUM62 suits most searches; BLOSUM45 for distant homologs.</small>
+            </label>
+            <label class="check"><input type="checkbox" id="filter" checked> Filter low-complexity regions
+              <small>Masks repeats like poly-A or simple sequence that cause spurious hits.</small>
+            </label>
+            <label class="wide">Job title <span class="muted">(optional)</span>
+              <input type="text" id="jobtitle" maxlength="80" placeholder="e.g. Hox genes vs genome">
+            </label>
+          </div>
+        </details>
+
+        <div class="submit-bar">
+          <div id="submit-summary" class="submit-summary"></div>
+          <button type="submit" class="btn btn-primary btn-big" id="submit-btn">BLAST</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ================= SUBMITTED / WAITING ================= -->
+    <section id="view-submitted" class="view" hidden>
+      <div class="panel center">
+        <div class="big-icon">↗</div>
+        <h2>One more click on GitHub</h2>
+        <p class="lead">A GitHub page opened in a new tab with your search filled in.<br>
+          Click the green <b>Create</b> button there to start it.</p>
+        <p class="muted" id="paste-note" hidden></p>
+        <p><a id="reopen-link" class="btn" target="_blank" rel="noopener">Open the GitHub page again</a></p>
+        <div class="waiting"><span class="spinner"></span> <span id="waiting-text">Waiting for the search to be created…</span></div>
+        <p class="muted small">You need a (free) GitHub account signed in. Results appear here automatically,
+          and are also posted on the GitHub issue, which emails you when they're ready.</p>
+        <form id="manual-job" class="inline-form">
+          <label>Already created it? Issue number <input type="number" min="1" id="manual-job-num" placeholder="#"></label>
+          <button class="btn" type="submit">Go</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ================= JOB ================= -->
+    <section id="view-job" class="view" hidden></section>
+
+    <!-- ================= JOB LIST ================= -->
+    <section id="view-jobs" class="view" hidden>
+      <h1>Searches</h1>
+      <div id="jobs-mine"></div>
+      <h2 class="section-title">Recent searches by everyone</h2>
+      <div id="jobs-all"><p class="muted">Loading…</p></div>
+    </section>
+
+    <!-- ================= HELP ================= -->
+    <section id="view-help" class="view prose" hidden>
+      <h1>How to use this site</h1>
+      <ol class="howto">
+        <li><b>Paste your sequence</b> (FASTA or plain). DNA vs protein is detected automatically.</li>
+        <li><b>Pick what to search</b>: the genome assembly, the annotated transcripts, or the predicted proteins.</li>
+        <li><b>Pick a program</b>. Only the programs that make sense for your query and database are offered, and the usual choice is pre-selected.</li>
+        <li>Press <b>BLAST</b>. GitHub opens with the search filled in; click <b>Create</b>. Results usually arrive in 1–3 minutes.</li>
+      </ol>
+
+      <h2>Which program should I use?</h2>
+      <table class="plain">
+        <thead><tr><th>You have</th><th>You want to search</th><th>Program</th><th>Good for</th></tr></thead>
+        <tbody>
+          <tr><td>DNA</td><td>Genome / transcripts</td><td><code>blastn</code></td><td>Finding where a DNA sequence (primer, gene, clone) is in the genome.</td></tr>
+          <tr><td>DNA</td><td>Proteins</td><td><code>blastx</code></td><td>Asking which predicted protein your DNA sequence encodes.</td></tr>
+          <tr><td>DNA</td><td>Genome / transcripts</td><td><code>tblastx</code></td><td>Very distant DNA-level matches, translated in all six frames (slow; limited to short queries).</td></tr>
+          <tr><td>Protein</td><td>Proteins</td><td><code>blastp</code></td><td>Finding the <i>H. elegans</i> homolog of a protein from another species.</td></tr>
+          <tr><td>Protein</td><td>Genome / transcripts</td><td><code>tblastn</code></td><td>Finding genes the annotation may have missed; hits show exons on the genome.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Reading the results</h2>
+      <ul>
+        <li><b>E-value</b>: how many hits this good you'd expect by chance. Smaller is better; below 1e-10 is usually a real homolog.</li>
+        <li><b>Query cover</b>: how much of your query is covered by the alignments to that sequence.</li>
+        <li><b>Identity</b>: percentage of identical positions in the best alignment.</li>
+        <li><b>Gene</b>: for genome hits, the annotated gene(s) overlapping the hit, or the nearest gene if the hit is intergenic.</li>
+        <li>The coloured graphic shows where on your query each hit aligns, coloured by score (same colours as NCBI).</li>
+      </ul>
+
+      <h2>Good to know</h2>
+      <ul>
+        <li>Searches run on GitHub's servers using the official NCBI BLAST+ programs, so results match a local BLAST.</li>
+        <li>Each search is a GitHub issue. Searches and results are visible to anyone who can see this repository.</li>
+        <li>Limits per search: 25 sequences; 200 kb total for blastn, 50 kb for blastx/blastp, 20 kb for tblastn, 10 kb for tblastx.</li>
+        <li>The first search after the genome is updated can take ~10–20 minutes while the databases are rebuilt.</li>
+      </ul>
+      <div id="db-info-help"></div>
+    </section>
+  </main>
+
+  <footer class="wrap footer" id="footer"></footer>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
