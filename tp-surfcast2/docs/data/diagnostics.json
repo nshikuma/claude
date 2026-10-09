@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-10-09T01:10:36.770Z",
+ "generatedAt": "2026-10-09T10:25:56.827Z",
  "synthetic": false,
  "errors": {},
  "trace": [
@@ -7,7 +7,7 @@
    "label": "cdip:dds",
    "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/realtime/100p1_rt.nc.dds",
    "status": 200,
-   "ms": 371,
+   "ms": 307,
    "bytes": 4796,
    "attempt": 0
   },
@@ -15,81 +15,81 @@
    "label": "cdip:dds",
    "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/realtime/100p1_rt.nc.dds",
    "status": 200,
-   "ms": 421,
+   "ms": 282,
    "bytes": 4796,
    "attempt": 0
   },
   {
-   "label": "cdip:params",
-   "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/realtime/100p1_rt.nc.ascii?waveTime[7736:1:7879],waveHs[7736:1:7879],waveTp[7736:1:7879],waveDp[7736:1:7879],waveTa[7736:1:7879],waveFlagPrimary[7736:1:7879]",
+   "label": "cdip:spectrum",
+   "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/realtime/100p1_rt.nc.ascii?waveTime[7897:1:7897],waveFrequency[0:1:63],waveBandwidth[0:1:63],waveEnergyDensity[7897:1:7897][0:1:63],waveMeanDirection[7897:1:7897][0:1:63]",
    "status": 200,
-   "ms": 84,
-   "bytes": 7871,
-   "attempt": 0
-  },
-  {
-   "label": "coops:curve",
-   "url": "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?station=9410230&time_zone=gmt&units=english&format=json&application=tp-surfcast2&product=predictions&datum=MLLW&interval=h&begin_date=20261006&end_date=20261024",
-   "status": 200,
-   "ms": 461,
-   "bytes": 17303,
-   "attempt": 0
-  },
-  {
-   "label": "coops:wtemp",
-   "url": "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?station=9410230&time_zone=gmt&units=english&format=json&application=tp-surfcast2&product=water_temperature&date=latest",
-   "status": 200,
-   "ms": 507,
-   "bytes": 142,
+   "ms": 58,
+   "bytes": 3956,
    "attempt": 0
   },
   {
    "label": "coops:hilo",
    "url": "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?station=9410230&time_zone=gmt&units=english&format=json&application=tp-surfcast2&product=predictions&datum=MLLW&interval=hilo&begin_date=20261006&end_date=20261024",
    "status": 200,
-   "ms": 536,
+   "ms": 459,
    "bytes": 3519,
    "attempt": 0
   },
   {
+   "label": "coops:wtemp",
+   "url": "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?station=9410230&time_zone=gmt&units=english&format=json&application=tp-surfcast2&product=water_temperature&date=latest",
+   "status": 200,
+   "ms": 458,
+   "bytes": 142,
+   "attempt": 0
+  },
+  {
+   "label": "coops:curve",
+   "url": "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?station=9410230&time_zone=gmt&units=english&format=json&application=tp-surfcast2&product=predictions&datum=MLLW&interval=h&begin_date=20261006&end_date=20261024",
+   "status": 200,
+   "ms": 483,
+   "bytes": 17303,
+   "attempt": 0
+  },
+  {
+   "label": "cdip:params",
+   "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/realtime/100p1_rt.nc.ascii?waveTime[7754:1:7897],waveHs[7754:1:7897],waveTp[7754:1:7897],waveDp[7754:1:7897],waveTa[7754:1:7897],waveFlagPrimary[7754:1:7897]",
+   "status": 200,
+   "ms": 225,
+   "bytes": 7868,
+   "attempt": 0
+  },
+  {
    "label": "cdip:sst",
-   "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/realtime/100p1_rt.nc.ascii?sstSeaSurfaceTemperature[7879:1:7879]",
+   "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/realtime/100p1_rt.nc.ascii?sstSeaSurfaceTemperature[7897:1:7897]",
    "status": 200,
-   "ms": 85,
-   "bytes": 171,
-   "attempt": 0
-  },
-  {
-   "label": "cdip:spectrum",
-   "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/realtime/100p1_rt.nc.ascii?waveTime[7879:1:7879],waveFrequency[0:1:63],waveBandwidth[0:1:63],waveEnergyDensity[7879:1:7879][0:1:63],waveMeanDirection[7879:1:7879][0:1:63]",
-   "status": 200,
-   "ms": 306,
-   "bytes": 3969,
-   "attempt": 0
-  },
-  {
-   "label": "openmeteo:weather",
-   "url": "https://api.open-meteo.com/v1/forecast?latitude=32.934&longitude=-117.2585&hourly=temperature_2m%2Cprecipitation%2Ccloud_cover%2Cwind_speed_10m%2Cwind_direction_10m%2Cwind_gusts_10m&daily=sunrise%2Csunset%2Cprecipitation_sum&models=ecmwf_ifs025%2Cgfs_seamless&timezone=America%2FLos_Angeles&forecast_days=15&past_days=4&wind_speed_unit=kn&temperature_unit=fahrenheit&precipitation_unit=inch",
-   "status": 200,
-   "ms": 673,
-   "bytes": 35247,
+   "ms": 57,
+   "bytes": 170,
    "attempt": 0
   },
   {
    "label": "openmeteo:marine",
    "url": "https://marine-api.open-meteo.com/v1/marine?latitude=32.934&longitude=-117.2585&hourly=wave_height%2Cwave_direction%2Cwave_period%2Cwind_wave_height%2Cwind_wave_direction%2Cwind_wave_period%2Cswell_wave_height%2Cswell_wave_direction%2Cswell_wave_period&models=ecmwf_wam025%2Cncep_gfswave025%2Cmeteofrance_wave&timezone=America%2FLos_Angeles&forecast_days=15&past_days=2&cell_selection=sea",
    "status": 200,
-   "ms": 785,
-   "bytes": 60966,
+   "ms": 776,
+   "bytes": 61008,
+   "attempt": 0
+  },
+  {
+   "label": "openmeteo:weather",
+   "url": "https://api.open-meteo.com/v1/forecast?latitude=32.934&longitude=-117.2585&hourly=temperature_2m%2Cprecipitation%2Ccloud_cover%2Cwind_speed_10m%2Cwind_direction_10m%2Cwind_gusts_10m&daily=sunrise%2Csunset%2Cprecipitation_sum&models=ecmwf_ifs025%2Cgfs_seamless&timezone=America%2FLos_Angeles&forecast_days=15&past_days=4&wind_speed_unit=kn&temperature_unit=fahrenheit&precipitation_unit=inch",
+   "status": 200,
+   "ms": 843,
+   "bytes": 35423,
    "attempt": 0
   }
  ],
  "biasByModel": {
   "ecmwf_wam025": {
-   "factor": 1.087719298245614,
+   "factor": 1.1355932203389831,
    "n": 47,
-   "raw": 1.087719298245614,
-   "note": "buoy ran 9% above this model over the last 24 h (47 matched hours)"
+   "raw": 1.1355932203389831,
+   "note": "buoy ran 14% above this model over the last 24 h (47 matched hours)"
   },
   "ncep_gfswave025": {
    "factor": 1,
@@ -97,23 +97,23 @@
    "note": "no overlapping hours"
   },
   "meteofrance_wave": {
-   "factor": 1.1403508771929827,
+   "factor": 1.169642857142857,
    "n": 47,
-   "raw": 1.1403508771929827,
-   "note": "buoy ran 14% above this model over the last 24 h (47 matched hours)"
+   "raw": 1.169642857142857,
+   "note": "buoy ran 17% above this model over the last 24 h (47 matched hours)"
   }
  },
  "modelHourCounts": {
-  "ecmwf_wam025": 408,
+  "ecmwf_wam025": 400,
   "ncep_gfswave025": 0,
-  "meteofrance_wave": 281
+  "meteofrance_wave": 257
  },
  "counts": {
   "buoyRecords": 144,
   "spectrumBands": 62,
   "tideSeries": 456,
-  "hourly": 408,
+  "hourly": 401,
   "days": 14,
-  "archives": 98
+  "archives": 99
  }
 }
