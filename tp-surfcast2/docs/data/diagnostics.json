@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-06T16:42:58.188Z",
+ "generatedAt": "2026-11-06T23:02:46.282Z",
  "synthetic": false,
  "errors": {},
  "trace": [
@@ -7,7 +7,7 @@
    "label": "cdip:dds",
    "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/realtime/100p1_rt.nc.dds",
    "status": 200,
-   "ms": 371,
+   "ms": 385,
    "bytes": 4796,
    "attempt": 0
   },
@@ -15,23 +15,39 @@
    "label": "cdip:dds",
    "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/realtime/100p1_rt.nc.dds",
    "status": 200,
-   "ms": 333,
+   "ms": 437,
    "bytes": 4796,
    "attempt": 0
   },
   {
-   "label": "coops:curve",
-   "url": "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?station=9410230&time_zone=gmt&units=english&format=json&application=tp-surfcast2&product=predictions&datum=MLLW&interval=h&begin_date=20261103&end_date=20261121",
+   "label": "cdip:params",
+   "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/realtime/100p1_rt.nc.ascii?waveTime[9124:1:9267],waveHs[9124:1:9267],waveTp[9124:1:9267],waveDp[9124:1:9267],waveTa[9124:1:9267],waveFlagPrimary[9124:1:9267]",
    "status": 200,
-   "ms": 402,
-   "bytes": 17306,
+   "ms": 57,
+   "bytes": 7848,
+   "attempt": 0
+  },
+  {
+   "label": "cdip:sst",
+   "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/realtime/100p1_rt.nc.ascii?sstSeaSurfaceTemperature[9267:1:9267]",
+   "status": 200,
+   "ms": 41,
+   "bytes": 170,
+   "attempt": 0
+  },
+  {
+   "label": "cdip:spectrum",
+   "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/realtime/100p1_rt.nc.ascii?waveTime[9267:1:9267],waveFrequency[0:1:63],waveBandwidth[0:1:63],waveEnergyDensity[9267:1:9267][0:1:63],waveMeanDirection[9267:1:9267][0:1:63]",
+   "status": 200,
+   "ms": 157,
+   "bytes": 3939,
    "attempt": 0
   },
   {
    "label": "coops:hilo",
    "url": "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?station=9410230&time_zone=gmt&units=english&format=json&application=tp-surfcast2&product=predictions&datum=MLLW&interval=hilo&begin_date=20261103&end_date=20261121",
    "status": 200,
-   "ms": 427,
+   "ms": 596,
    "bytes": 3573,
    "attempt": 0
   },
@@ -39,56 +55,40 @@
    "label": "coops:wtemp",
    "url": "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?station=9410230&time_zone=gmt&units=english&format=json&application=tp-surfcast2&product=water_temperature&date=latest",
    "status": 200,
-   "ms": 478,
+   "ms": 600,
    "bytes": 142,
    "attempt": 0
   },
   {
-   "label": "cdip:spectrum",
-   "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/realtime/100p1_rt.nc.ascii?waveTime[9254:1:9254],waveFrequency[0:1:63],waveBandwidth[0:1:63],waveEnergyDensity[9254:1:9254][0:1:63],waveMeanDirection[9254:1:9254][0:1:63]",
+   "label": "coops:curve",
+   "url": "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?station=9410230&time_zone=gmt&units=english&format=json&application=tp-surfcast2&product=predictions&datum=MLLW&interval=h&begin_date=20261103&end_date=20261121",
    "status": 200,
-   "ms": 323,
-   "bytes": 3951,
-   "attempt": 0
-  },
-  {
-   "label": "cdip:params",
-   "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/realtime/100p1_rt.nc.ascii?waveTime[9111:1:9254],waveHs[9111:1:9254],waveTp[9111:1:9254],waveDp[9111:1:9254],waveTa[9111:1:9254],waveFlagPrimary[9111:1:9254]",
-   "status": 200,
-   "ms": 330,
-   "bytes": 7874,
-   "attempt": 0
-  },
-  {
-   "label": "cdip:sst",
-   "url": "https://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/realtime/100p1_rt.nc.ascii?sstSeaSurfaceTemperature[9254:1:9254]",
-   "status": 200,
-   "ms": 67,
-   "bytes": 171,
-   "attempt": 0
-  },
-  {
-   "label": "openmeteo:marine",
-   "url": "https://marine-api.open-meteo.com/v1/marine?latitude=32.934&longitude=-117.2585&hourly=wave_height%2Cwave_direction%2Cwave_period%2Cwind_wave_height%2Cwind_wave_direction%2Cwind_wave_period%2Cswell_wave_height%2Cswell_wave_direction%2Cswell_wave_period&models=ecmwf_wam025%2Cncep_gfswave025%2Cmeteofrance_wave&timezone=America%2FLos_Angeles&forecast_days=15&past_days=2&cell_selection=sea",
-   "status": 200,
-   "ms": 796,
-   "bytes": 60874,
+   "ms": 630,
+   "bytes": 17306,
    "attempt": 0
   },
   {
    "label": "openmeteo:weather",
    "url": "https://api.open-meteo.com/v1/forecast?latitude=32.934&longitude=-117.2585&hourly=temperature_2m%2Cprecipitation%2Ccloud_cover%2Cwind_speed_10m%2Cwind_direction_10m%2Cwind_gusts_10m&daily=sunrise%2Csunset%2Cprecipitation_sum&models=ecmwf_ifs025%2Cgfs_seamless&timezone=America%2FLos_Angeles&forecast_days=15&past_days=4&wind_speed_unit=kn&temperature_unit=fahrenheit&precipitation_unit=inch",
    "status": 200,
-   "ms": 910,
-   "bytes": 35363,
+   "ms": 971,
+   "bytes": 35195,
+   "attempt": 0
+  },
+  {
+   "label": "openmeteo:marine",
+   "url": "https://marine-api.open-meteo.com/v1/marine?latitude=32.934&longitude=-117.2585&hourly=wave_height%2Cwave_direction%2Cwave_period%2Cwind_wave_height%2Cwind_wave_direction%2Cwind_wave_period%2Cswell_wave_height%2Cswell_wave_direction%2Cswell_wave_period&models=ecmwf_wam025%2Cncep_gfswave025%2Cmeteofrance_wave&timezone=America%2FLos_Angeles&forecast_days=15&past_days=2&cell_selection=sea",
+   "status": 200,
+   "ms": 976,
+   "bytes": 60874,
    "attempt": 0
   }
  ],
  "biasByModel": {
   "ecmwf_wam025": {
-   "factor": 1.1166666666666667,
+   "factor": 1.1228070175438598,
    "n": 47,
-   "raw": 1.1166666666666667,
+   "raw": 1.1228070175438598,
    "note": "buoy ran 12% above this model over the last 24 h (47 matched hours)"
   },
   "ncep_gfswave025": {
@@ -97,14 +97,14 @@
    "note": "no overlapping hours"
   },
   "meteofrance_wave": {
-   "factor": 1.24,
+   "factor": 1.2446808510638299,
    "n": 47,
-   "raw": 1.24,
+   "raw": 1.2446808510638299,
    "note": "buoy ran 24% above this model over the last 24 h (47 matched hours)"
   }
  },
  "modelHourCounts": {
-  "ecmwf_wam025": 400,
+  "ecmwf_wam025": 408,
   "ncep_gfswave025": 0,
   "meteofrance_wave": 280
  },
@@ -112,7 +112,7 @@
   "buoyRecords": 144,
   "spectrumBands": 62,
   "tideSeries": 456,
-  "hourly": 400,
+  "hourly": 408,
   "days": 14,
   "archives": 160
  }
